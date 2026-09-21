@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Aerospace Projects — Sasha Heneghan</title>
+    <meta
+      name="description"
+      content="Aerospace emphasis projects by Sasha Heneghan."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Syne:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css?v=contact-mail" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>S</text></svg>"
+    />
+  </head>
+  <body class="aerospace">
+    <div class="space-field" aria-hidden="true">
+      <span class="star-layer star-layer-a"></span>
+      <span class="star-layer star-layer-b"></span>
+      <span class="star-layer star-layer-c"></span>
+      <span class="space-planet"></span>
+    </div>
+    <a class="skip-link" href="#top">Skip to content</a>
+
+    <header class="site-header">
+      <a class="wordmark" href="index.html">Inside my Mind</a>
+      <nav aria-label="Primary">
+        <div class="nav-dropdown">
+          <button class="nav-dropdown-label" type="button" aria-expanded="false" aria-haspopup="true" aria-current="true">Projects</button>
+          <ul class="nav-dropdown-menu">
+            <li><a href="ide.html">Integrated Design Projects</a></li>
+            <li><a href="aerospace.html" aria-current="page">Aerospace Projects</a></li>
+            <li><a href="ctd.html">Creative Tech and Design Projects</a></li>
+            <li><a href="art.html">Physical and Digital Art</a></li>
+          </ul>
+        </div>
+        <div class="nav-dropdown nav-dropdown-contact">
+          <a class="btn-nav" href="index.html#contact" aria-haspopup="true">Contact</a>
+          <ul class="nav-dropdown-menu">
+            <li><a href="mailto:sasha1234ih@gmail.com">sasha1234ih@gmail.com</a></li>
+            <li><a href="mailto:alexandra.heneghan@colorado.edu">alexandra.heneghan@colorado.edu</a></li>
+          </ul>
+        </div>
+      </nav>
+    </header>
+
+    <main id="top" class="page-main">
+      <section class="page">
+        <div class="section-heading">
+          <h1>Aerospace Projects</h1>
+        </div>
+        <div
+          class="galaxy-viewport"
+          id="galaxy-viewport"
+          aria-label="Interactive galaxy of aerospace projects"
+        >
+          <canvas id="galaxy-canvas"></canvas>
+          <div class="planet-menu" id="planet-menu">
+            <button
+              class="planet-menu-label"
+              type="button"
+              aria-expanded="false"
+              aria-haspopup="true"
+              aria-controls="planet-menu-list"
+            >
+              Projects
+            </button>
+            <ul class="planet-menu-list" id="planet-menu-list" hidden></ul>
+          </div>
+          <div class="rocky-chat" id="rocky-chat" hidden>
+            <p class="rocky-line">
+              <span id="rocky-greeting"></span><span class="rocky-caret" id="rocky-speak-caret" aria-hidden="true"></span>
+            </p>
+          </div>
+        </div>
+      </section>
+    </main>
+    <aside class="planet-dossier" id="planet-dossier" hidden>
+      <button class="planet-dossier-close" type="button">Close</button>
+      <p class="project-year"></p>
+      <h2></h2>
+      <p class="planet-dossier-copy"></p>
+      <div class="tags"></div>
+      <div class="project-links"></div>
+    </aside>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.180.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script src="projects.js"></script>
+    <script src="script.js?v=spheres2"></script>
+    <script src="nav.js"></script>
+    <script type="module" src="galaxy.js?v=no-blog"></script>
+  </body>
+</html>
