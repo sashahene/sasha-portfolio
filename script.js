@@ -102,6 +102,7 @@ function renderWorkIndex(list, projects) {
       const tags = (project.tags || [])
         .map((tag) => `<span>${escapeHtml(tag)}</span>`)
         .join("");
+      const models = Array.isArray(project.models) ? project.models : [];
       const image = project.image
         ? `<img src="${escapeHtml(project.image)}" alt="${escapeHtml(project.title || "")}">`
         : "";
@@ -110,11 +111,24 @@ function renderWorkIndex(list, projects) {
         : "";
       const cta =
         project.demo || project.github
-          ? `<span class="ide-work-cta">View case study <span aria-hidden="true">↗</span></span>`
+          ? `<a class="ide-work-cta" href="${escapeHtml(href)}"${external}>View research <span aria-hidden="true">↗</span></a>`
           : "";
+      const extras = models.length
+        ? `<div class="ide-work-models">
+            ${models
+              .map(
+                (model) => `
+              <figure>
+                <p>${escapeHtml(model.label || "Model")}</p>
+                <iframe src="${escapeHtml(model.src)}" title="${escapeHtml(model.label || "3D model")}" loading="lazy" allow="fullscreen"></iframe>
+              </figure>`
+              )
+              .join("")}
+          </div>`
+        : "";
 
       return `
-        <li class="ide-work">
+        <li class="ide-work${models.length ? " has-models" : ""}">
           <a class="ide-work-image" href="${escapeHtml(href)}"${external} aria-label="${escapeHtml(project.title || "Project")}">
             ${image}
             <span class="ide-work-go" aria-hidden="true">↗</span>
@@ -131,6 +145,7 @@ function renderWorkIndex(list, projects) {
               ${cta}
             </div>
           </div>
+          ${extras}
         </li>
       `;
     })

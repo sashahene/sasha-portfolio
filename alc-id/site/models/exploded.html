@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>BAC Sweat Sensor Bracelet: Exploded View</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-0:#020617; --navy-1:#06123F; --navy-2:#0B2585; --line:#3B5BA8; --text:#F2F6FF; --muted:#A9B8E6;
+  --glow:#6FD2FF; --panel:rgba(10,14,28,.85); --panel-line:rgba(111,210,255,.28);
+  --font:"Exo 2","Segoe UI",system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--navy-0:#020617;--navy-1:#06123F;--navy-2:#0B2585;--text:#F2F6FF;--muted:#A9B8E6}}
+:root[data-theme="dark"]{--navy-0:#020617;--navy-1:#06123F;--navy-2:#0B2585;--text:#F2F6FF;--muted:#A9B8E6}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:#000;color:var(--text);font-family:var(--font);overflow:hidden}
+.hex{position:fixed;inset:0;pointer-events:none;opacity:.55;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='97' viewBox='0 0 168 97'%3E%3Cg fill='none' stroke='%233B5BA8' stroke-width='1.2'%3E%3Cpath d='M28 0 L56 0 L70 24 L56 48.5 L28 48.5 L14 24 Z'/%3E%3Cpath d='M112 48.5 L140 48.5 L154 72.7 L140 97 L112 97 L98 72.7 Z'/%3E%3Cpath d='M70 24 L98 24 M154 72.7 L168 72.7 M0 72.7 L14 72.7'/%3E%3C/g%3E%3Cg fill='%233B5BA8'%3E%3Ccircle cx='28' cy='0' r='2.4'/%3E%3Ccircle cx='56' cy='48.5' r='2.4'/%3E%3Ccircle cx='70' cy='24' r='2.4'/%3E%3Ccircle cx='112' cy='97' r='2.4'/%3E%3Ccircle cx='154' cy='72.7' r='2.4'/%3E%3C/g%3E%3C/svg%3E");
+  background-size:168px 97px;
+  -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 45%, transparent 35%, #000 85%);
+          mask-image:radial-gradient(ellipse 70% 60% at 50% 45%, transparent 35%, #000 85%)}
+svg.swoosh{position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+canvas#gl:active{cursor:grabbing}
+
+header{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);padding:1.1rem 1.4rem;pointer-events:none;z-index:3}
+h1{margin:0;font-weight:600;font-size:clamp(1.3rem,3.4vw,2.1rem);line-height:1.1;letter-spacing:-.01em;max-width:22ch}
+header p{margin:.35rem 0 0;color:var(--muted);font-size:.95rem;max-width:44ch}
+
+#labels{position:fixed;inset:0;pointer-events:none;z-index:2}
+.lbl{position:absolute;left:0;top:0;display:flex;align-items:center;gap:.45rem;pointer-events:auto;
+  background:none;border:0;color:var(--text);font:500 .88rem/1.2 var(--font);padding:.2rem .3rem;cursor:pointer;
+  white-space:nowrap;transition:opacity .25s;text-shadow:0 1px 6px #000}
+.lbl::before{content:"";width:26px;height:1px;background:var(--glow);box-shadow:0 0 6px var(--glow);flex:none}
+.lbl i{width:7px;height:7px;border-radius:50%;background:var(--glow);box-shadow:0 0 10px var(--glow);position:absolute;left:-3px}
+.lbl[aria-pressed="true"]{color:var(--glow)}
+.lbl:focus-visible{outline:2px solid var(--glow);outline-offset:2px;border-radius:4px}
+
+.controls{position:fixed;left:50%;right:auto;top:auto;bottom:calc(.7rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:4;
+  display:flex;background:transparent;border:0;padding:0;width:max-content}
+.controls label{display:flex;align-items:center;gap:.6rem;font-size:.9rem;color:var(--muted);flex:1 1 200px}
+input[type=range]{flex:1;accent-color:var(--glow);min-width:0}
+.cbtn{background:rgba(111,210,255,.12);border:1px solid var(--panel-line);color:var(--text);font:600 .88rem var(--font);
+  padding:.45rem .85rem;border-radius:9px;cursor:pointer}
+.cbtn[aria-pressed="true"]{background:var(--glow);color:#041036;border-color:var(--glow)}
+.cbtn:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+.sizes{display:flex;align-items:center;gap:.3rem;color:var(--muted);font-size:.9rem}
+.sizes span{margin-right:.2rem}
+.cbtn.sz{padding:.45rem .6rem;min-width:2.1rem}
+
+.info{position:fixed;left:1.2rem;right:auto;top:6.5rem;width:min(320px,calc(100% - 2.4rem));z-index:4;
+  background:var(--panel);border:1px solid var(--panel-line);border-radius:14px;padding:1rem 1.1rem;backdrop-filter:blur(8px);
+  transition:opacity .25s, transform .25s}
+.info.hidden{opacity:0;transform:translateY(6px);pointer-events:none}
+.info h2{margin:0 0 .4rem;font-size:1.15rem;font-weight:600;color:var(--glow)}
+.info p{margin:.35rem 0;font-size:.93rem;line-height:1.5;color:var(--text)}
+.info .x{position:absolute;right:.5rem;top:.35rem;background:none;border:0;color:var(--muted);font-size:1.3rem;cursor:pointer}
+.chem{font-size:.85rem;color:var(--muted);border-left:2px solid var(--glow);padding-left:.6rem}
+
+.phone{position:fixed;right:1.4rem;bottom:6.5rem;z-index:3;width:170px;border-radius:26px;padding:1rem .9rem 1.1rem;
+  background:linear-gradient(160deg,#0d1b4d,#050b24);border:2px solid #2a3f86;
+  box-shadow:0 0 30px rgba(111,210,255,.25);transition:opacity .35s, transform .35s}
+.phone.off{opacity:0;transform:translateY(10px);pointer-events:none}
+.phone .notch{width:46px;height:5px;border-radius:3px;background:#2a3f86;margin:0 auto .8rem}
+.phone .bt{font-size:.75rem;color:var(--glow);display:flex;align-items:center;gap:.35rem}
+.phone .bt::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--glow);box-shadow:0 0 8px var(--glow)}
+.phone .val{font-size:2.1rem;font-weight:700;margin:.4rem 0 0;line-height:1}
+.phone .cap{font-size:.78rem;color:var(--muted)}
+.phone svg{width:100%;height:44px;margin-top:.5rem}
+.phone .demo{font-size:.68rem;color:var(--muted);margin-top:.35rem}
+
+.hint{position:fixed;left:1.4rem;bottom:6.2rem;z-index:3;color:var(--muted);font-size:.85rem;pointer-events:none;transition:opacity 1s}
+
+@media (max-width:720px){
+  .info{top:auto;bottom:calc(8.2rem + env(safe-area-inset-bottom,0px));right:.75rem}
+  .phone{right:.75rem;bottom:calc(8.2rem + env(safe-area-inset-bottom,0px));width:140px;padding:.8rem .75rem}
+  .phone .val{font-size:1.7rem}
+  .hint{display:none}
+  .lbl{font-size:.78rem}
+  .lbl::before{width:16px}
+}
+
+html.embed header, html.embed .hex, html.embed .hint, html.embed .phone { display: none !important; }
+.fsbtn{position:fixed;right:.7rem;bottom:calc(.7rem + env(safe-area-inset-bottom,0px));z-index:4}
+html.embed .controls { bottom: .45rem; }
+html.embed .fsbtn { right: .45rem; bottom: .45rem; }
+html.embed .cbtn { font-size: .72rem; padding: .32rem .55rem; }
+html.embed .info { top: .45rem; left: .45rem; right: auto; width: min(190px, 52%); max-height: 70%; }
+</style>
+</head>
+<body>
+<div class="hex" aria-hidden="true"></div>
+
+<canvas id="gl" aria-label="3D model of the bracelet. Drag to rotate."></canvas>
+<div id="labels"></div>
+
+<header>
+  <h1>How the BAC sweat sensor bracelet fits together</h1>
+  <p>Drag to turn it. Tap any part to see what it does.</p>
+</header>
+
+<aside class="info hidden" id="info" aria-live="polite">
+  <button class="x" id="infoClose" aria-label="Close">×</button>
+  <h2 id="infoTitle"></h2>
+  <div id="infoBody"></div>
+</aside>
+
+<div class="phone off" id="phone" aria-label="Phone app preview">
+  <div class="notch"></div>
+  <div class="bt">Bluetooth connected</div>
+  <div class="val" id="bac">0.000%</div>
+  <div class="cap">estimated BAC</div>
+  <svg viewBox="0 0 140 44" preserveAspectRatio="none"><polyline id="spark" fill="none" stroke="#6FD2FF" stroke-width="2" points=""/></svg>
+  <div class="demo">Demo numbers, not real data</div>
+</div>
+
+<div class="hint" id="hint">Drag to rotate</div>
+
+<div class="controls">
+  <button class="cbtn" id="toggleBtn">Take it apart</button>
+</div>
+<button class="cbtn fsbtn" id="fsBtn" type="button">Full screen</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const cv=document.getElementById("gl");
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(34,1,.1,100);
+
+/* ---------- reflections: a tiny studio made of glowing panels ---------- */
+(function(){
+  const env=new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(20,32,16),new THREE.MeshBasicMaterial({color:0x0c0c0e,side:THREE.BackSide})));
+  const panel=(w,h,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);env.add(m)};
+  panel(14,3,0xffffff,0,12,4); panel(10,4,0xd8d8dc,-12,3,-4); panel(6,8,0xbfbfc4,12,2,6); panel(12,2,0xe6e6ea,4,-6,12); panel(8,6,0xffffff,0,2,-14);
+  const pm=new THREE.PMREMGenerator(renderer);
+  scene.environment=pm.fromScene(env,0.03).texture;
+})();
+
+scene.add(new THREE.HemisphereLight(0xe8e8ec,0x111114,.7));
+const key=new THREE.DirectionalLight(0xffffff,1.3);key.position.set(4,8,6);scene.add(key);
+const rim=new THREE.DirectionalLight(0xffffff,1.8);rim.position.set(-6,3,-6);scene.add(rim);
+const rim2=new THREE.DirectionalLight(0xf2f2f5,1.2);rim2.position.set(6,1,-5);scene.add(rim2);
+
+/* ---------- geometry helpers ---------- */
+function rrShape(w,d,r){const s=new THREE.Shape(),x=-w/2,y=-d/2;r=Math.min(r,w/2,d/2);
+  s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+d-r);s.quadraticCurveTo(x+w,y+d,x+w-r,y+d);
+  s.lineTo(x+r,y+d);s.quadraticCurveTo(x,y+d,x,y+d-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s}
+function rrPath(w,d,r,cx=0,cy=0){const p=new THREE.Path(),x=cx-w/2,y=cy-d/2;
+  p.moveTo(x+r,y);p.lineTo(x+w-r,y);p.quadraticCurveTo(x+w,y,x+w,y+r);p.lineTo(x+w,y+d-r);p.quadraticCurveTo(x+w,y+d,x+w-r,y+d);
+  p.lineTo(x+r,y+d);p.quadraticCurveTo(x,y+d,x,y+d-r);p.lineTo(x,y+r);p.quadraticCurveTo(x,y,x+r,y);return p}
+/* flat rounded plate lying in XZ, thickness along Y, centered */
+function plate(w,d,t,r,mat,opts={}){
+  const s=rrShape(w,d,r); if(opts.holes)opts.holes.forEach(h=>s.holes.push(h));
+  const bev=opts.bevel||0;
+  const g=new THREE.ExtrudeGeometry(s,{depth:t-bev*2>0?t-bev*2:t,bevelEnabled:!!bev,bevelSize:bev,bevelThickness:bev,bevelSegments:4,curveSegments:18});
+  g.rotateX(-Math.PI/2); g.computeBoundingBox(); const bb=g.boundingBox; g.translate(0,-(bb.max.y+bb.min.y)/2,0);
+  return new THREE.Mesh(g,mat);
+}
+const M=(o)=>new THREE.MeshStandardMaterial(o);
+const mats={
+  glossBlack:new THREE.MeshPhysicalMaterial({color:0x0b0b0c,roughness:.12,metalness:.1,clearcoat:1,clearcoatRoughness:.05,envMapIntensity:1.4}),
+  shell:new THREE.MeshPhysicalMaterial({color:0x111113,roughness:.3,metalness:.2,clearcoat:.6,envMapIntensity:1.1}),
+  silicone:M({color:0x111112,roughness:.55,metalness:0,envMapIntensity:1.1}),
+  pcb:M({color:0x0f5a3c,roughness:.5,metalness:.1}),
+  chip:M({color:0x15161c,roughness:.35,metalness:.3}),
+  metalChip:M({color:0xb9c0cc,roughness:.25,metalness:.9}),
+  gold:M({color:0xd6a646,roughness:.25,metalness:1}),
+  battery:M({color:0xc7ccd6,roughness:.3,metalness:.85}),
+  batteryWrap:M({color:0x2a2a2d,roughness:.45,metalness:.1}),
+  back:M({color:0x1a1a1c,roughness:.45,metalness:.25}),
+  ceramic:M({color:0xe9ecf2,roughness:.7}),
+  prussian:M({color:0x1f4fd1,roughness:.45,emissive:0x0a2a88,emissiveIntensity:.35}),
+  silver:M({color:0xd9dde4,roughness:.25,metalness:1}),
+  carbon:M({color:0x26272c,roughness:.8}),
+  enzyme:new THREE.MeshPhysicalMaterial({color:0xf2d45c,roughness:.3,transparent:true,opacity:.62,emissive:0x5a4400,emissiveIntensity:.25}),
+  nafion:new THREE.MeshPhysicalMaterial({color:0x9fe4ff,roughness:.05,transparent:true,opacity:.35,clearcoat:1,emissive:0x0a3d55,emissiveIntensity:.35})
+};
+
+const root=new THREE.Group(); scene.add(root);
+const model=new THREE.Group(); root.add(model);
+
+/* ---------- strap: an adjustable band with a clasp ---------- */
+const RX=1.9,RY=1.55,TH=.17,SW=1.1,TT=.13;
+const strapGroup=new THREE.Group();model.add(strapGroup);
+const B=-Math.PI/2;                 // bottom of the band
+const STUD=B+.3;                    // the stud is fixed to the band here
+const GAP=.13;                      // spacing between holes
+const KEEP=STUD+.2;                 // keeper loop position
+/* tighter fit = more strap pulled through the keeper = longer loose end */
+const SIZES={S:{extra:5,k:.9},M:{extra:3,k:1},L:{extra:1,k:1.1}};
+let sizeK=1,sizeTarget=1;
+const ep=(rx,ry,a)=>new THREE.Vector2(rx*Math.cos(a),ry*Math.sin(a));
+function arcBand(rx,ry,th,a0,a1,width){
+  const s=new THREE.Shape(),n=Math.max(8,Math.ceil(Math.abs(a1-a0)*40));
+  for(let i=0;i<=n;i++){const a=a0+(a1-a0)*i/n,v=ep(rx,ry,a);i?s.lineTo(v.x,v.y):s.moveTo(v.x,v.y)}
+  // rounded tip on the loose end
+  for(let i=n;i>=0;i--){const a=a0+(a1-a0)*i/n,v=ep(rx-th,ry-th,a);s.lineTo(v.x,v.y)}
+  const g=new THREE.ExtrudeGeometry(s,{depth:width-.1,bevelEnabled:true,bevelSize:.045,bevelThickness:.05,bevelSegments:3,curveSegments:4});
+  g.translate(0,0,-(width-.1)/2);return g;
+}
+// main band: over the top, from the stud side around to just before the bottom on the other side
+strapGroup.add(new THREE.Mesh(arcBand(RX,RY,TH,B,B+2*Math.PI-.45,SW),mats.silicone));
+// loose end with holes: starts where the band ends and slides over the outside
+const tail=new THREE.Mesh(arcBand(RX+TT+.01,RY+TT+.01,TT,B-.55,STUD+3*GAP+.14,SW-.08),mats.silicone);
+strapGroup.add(tail);
+const holeMat=M({color:0x000000,roughness:1});
+const holes=[];
+for(let j=1;j<=5;j++){const h=new THREE.Mesh(new THREE.CylinderGeometry(.05,.05,.03,20),holeMat);
+  const a=STUD+j*GAP,v=ep(RX+TT+.058,RY+TT+.058,a);h.position.set(v.x,v.y,0);h.rotation.z=a-Math.PI/2;strapGroup.add(h);holes.push({h,a})}
+// stud, fixed in place, poking through whichever hole is in use
+const stud=new THREE.Group();
+const studHead=new THREE.Mesh(new THREE.CylinderGeometry(.065,.065,.05,24),M({color:0xb8bec9,roughness:.25,metalness:1}));studHead.position.y=.01;stud.add(studHead);
+const studRim=new THREE.Mesh(new THREE.TorusGeometry(.065,.012,8,24),M({color:0x7e8592,roughness:.3,metalness:1}));studRim.rotation.x=Math.PI/2;studRim.position.y=.03;stud.add(studRim);
+(function(){const v=ep(RX+TT+.075,RY+TT+.075,STUD);stud.position.set(v.x,v.y,0);stud.rotation.z=STUD-Math.PI/2})();
+strapGroup.add(stud);
+// keeper loop holding the loose end flat
+(function(){const len=TH+TT+.28;
+  const k=plate(len,SW+.22,.1,.05,mats.silicone,{holes:[rrPath(len-.1,SW+.08,.03)]});
+  const v=ep(RX+TT/2-TH/2+.01,RY+TT/2-TH/2+.01,KEEP);k.position.set(v.x,v.y,0);k.rotation.z=KEEP;strapGroup.add(k)})();
+let tailEnd=STUD+3*GAP+.14,tailTarget=tailEnd,builtEnd=tailEnd;
+function updateTail(){
+  if(Math.abs(tailEnd-builtEnd)>.002){tail.geometry.dispose();tail.geometry=arcBand(RX+TT+.01,RY+TT+.01,TT,B-.55,tailEnd,SW-.08);builtEnd=tailEnd}
+  holes.forEach(o=>o.h.visible=o.a<tailEnd-.08);
+}
+updateTail();
+
+/* ---------- parts of the pod ---------- */
+const POD_L=2.05,POD_W=1.0,Y0=RY-.12;
+const parts=[];
+function addPart(key,name,obj,base,out,anchor,info){obj.position.y=base;model.add(obj);
+  const a=new THREE.Object3D();a.position.set(anchor,0,0);obj.add(a);
+  parts.push({key,name,obj,base,out,anchor:a,info})}
+
+// 1. Top cover + screen
+const top=new THREE.Group();
+top.add(plate(POD_L,POD_W,.08,.46,mats.glossBlack,{bevel:.03}));
+(function(){
+  const c=document.createElement("canvas");c.width=512;c.height=200;const x=c.getContext("2d");
+  x.fillStyle="#000";x.fillRect(0,0,512,200);
+  x.shadowColor="#6FD2FF";x.shadowBlur=24;x.fillStyle="#bfeaff";x.font="700 92px 'Exo 2', sans-serif";x.textAlign="center";x.textBaseline="middle";
+  x.fillText("0.03%",256,92);x.shadowBlur=10;x.font="500 30px 'Exo 2', sans-serif";x.fillStyle="#6FD2FF";x.fillText("BAC estimate",256,160);
+  const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;
+  const scr=new THREE.Mesh(new THREE.PlaneGeometry(1.3,.5),new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:.95,blending:THREE.AdditiveBlending,depthWrite:false}));
+  scr.rotation.x=-Math.PI/2;scr.position.y=.056;top.add(scr);
+  document.fonts&&document.fonts.ready.then(()=>{x.fillStyle="#000";x.fillRect(0,0,512,200);x.shadowBlur=24;x.fillStyle="#bfeaff";x.font="700 92px 'Exo 2', sans-serif";x.fillText("0.03%",256,92);x.shadowBlur=10;x.font="500 30px 'Exo 2', sans-serif";x.fillStyle="#6FD2FF";x.fillText("BAC estimate",256,160);tex.needsUpdate=true});
+})();
+addPart("top","Screen and cover",top,Y0+.21,2.3,POD_L/2+.05,
+  `<p>The glossy top shows your estimated BAC and whether the bracelet is connected. For a proof of concept, the phone app can do the displaying, so a simple LED would also work here.</p>`);
+
+// 2. Housing shell (ring with open middle)
+const shell=plate(POD_L,POD_W,.3,.46,mats.shell,{holes:[rrPath(POD_L-.18,POD_W-.18,.38)]});
+addPart("shell","Housing",shell,Y0+.02,1.65,POD_L/2+.02,
+  `<p>The case holds everything together and keeps sweat and water away from the electronics. It clips into the strap like a fitness band.</p>`);
+
+// 3. Battery
+const batt=new THREE.Group();
+batt.add(plate(1.35,.66,.11,.12,mats.battery));
+const wrap=plate(1.36,.67,.05,.12,mats.batteryWrap);wrap.position.y=.03;batt.add(wrap);
+const tab1=new THREE.Mesh(new THREE.BoxGeometry(.14,.02,.08),mats.silver);tab1.position.set(.76,0,.16);batt.add(tab1);
+const tab2=tab1.clone();tab2.position.z=-.16;batt.add(tab2);
+addPart("battery","Battery",batt,Y0+.06,1.05,.78,
+  `<p>A small rechargeable lithium battery powers the board and the sensor. Sensing uses very little power, so it can last a long time between charges.</p>`);
+
+// 4. Main board
+const board=new THREE.Group();
+board.add(plate(1.74,.78,.05,.28,mats.pcb));
+const esp=new THREE.Group();
+const espBase=new THREE.Mesh(new THREE.BoxGeometry(.62,.04,.46),mats.chip);esp.add(espBase);
+const espCan=new THREE.Mesh(new THREE.BoxGeometry(.46,.06,.4),mats.metalChip);espCan.position.set(-.06,.05,0);esp.add(espCan);
+const ant=new THREE.Mesh(new THREE.BoxGeometry(.1,.02,.4),mats.gold);ant.position.set(.24,.03,0);esp.add(ant);
+esp.position.set(.36,.05,0);board.add(esp);
+const pot=new THREE.Mesh(new THREE.BoxGeometry(.3,.06,.3),mats.chip);pot.position.set(-.35,.055,.05);board.add(pot);
+for(let i=0;i<4;i++){for(const side of[-1,1]){const pin=new THREE.Mesh(new THREE.BoxGeometry(.03,.02,.05),mats.gold);pin.position.set(-.46+i*.075,.035,.05+side*.17);board.add(pin)}}
+for(let i=0;i<6;i++){const cap=new THREE.Mesh(new THREE.BoxGeometry(.07,.04,.04),M({color:0x8b6a45,roughness:.5}));cap.position.set(-.72+(i%3)*.12,.045,-.25+Math.floor(i/3)*.12);board.add(cap)}
+for(let i=0;i<5;i++){const tr=new THREE.Mesh(new THREE.BoxGeometry(.55,.005,.012),mats.gold);tr.position.set(-.02,.027,-.27+i*.055);board.add(tr)}
+const conn=new THREE.Mesh(new THREE.BoxGeometry(.14,.05,.34),M({color:0xe8e2d0,roughness:.6}));conn.position.set(.45,-.05,0);board.add(conn);
+const connLatch=new THREE.Mesh(new THREE.BoxGeometry(.05,.02,.36),M({color:0x1a1a1a,roughness:.5}));connLatch.position.set(.49,-.08,0);board.add(connLatch);
+addPart("board","Main board: brain + Bluetooth",board,Y0-.07,.45,.89,
+  `<p>Two chips do the thinking. The <b>potentiostat</b> (the square chip) holds the electrodes at a steady voltage and measures the tiny current the sensor makes.</p>
+   <p>The <b>microcontroller</b> (the silver chip, like an ESP32) turns that current into an alcohol reading and sends it to your phone over its built-in Bluetooth, so you don't need a separate Bluetooth module.</p>
+   <p>The white connector underneath is where the flex cable from the sensor plugs in.</p>`);
+
+// 5. Back plate with sensor window
+const back=new THREE.Group();
+back.add(plate(POD_L-.04,POD_W-.04,.08,.44,mats.back,{holes:[rrPath(.8,.56,.12,-.15,0),rrPath(.1,.36,.04,.45,0)]}));
+for(const z of[-.16,.16]){const pad=new THREE.Mesh(new THREE.CylinderGeometry(.07,.07,.03,24),mats.gold);pad.position.set(.62,-.045,z);back.add(pad)}
+addPart("back","Back plate",back,Y0-.17,0,POD_L/2,
+  `<p>The part that rests on your wrist. The window lets sweat reach the sensor. The two gold dots are charging contacts.</p>`);
+
+// 6. Electrode strip
+const elec=new THREE.Group();
+elec.add(plate(.95,.62,.05,.06,mats.ceramic));
+const etab=plate(.24,.34,.05,.04,mats.ceramic);etab.position.x=.56;elec.add(etab);
+[[-.12,.6,-.1],[.36,.6,0],[.13,.6,.1]].forEach(([x0,x1,z])=>{const t=new THREE.Mesh(new THREE.BoxGeometry(x1-x0,.006,.025),mats.gold);t.position.set((x0+x1)/2,.028,z);elec.add(t)});
+[-.1,0,.1].forEach(z=>{const pd=new THREE.Mesh(new THREE.BoxGeometry(.07,.01,.06),mats.gold);pd.position.set(.62,.03,z);elec.add(pd)});
+const disc=(r,mat,x,z)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,.03,40),mat);m.position.set(x,.035,z);elec.add(m);return m};
+disc(.16,mats.prussian,-.12,0);                 // working electrode
+const ce=new THREE.Mesh(new THREE.TorusGeometry(.25,.035,8,48,Math.PI*1.25),mats.carbon);ce.rotation.x=-Math.PI/2;ce.rotation.z=Math.PI*.375;ce.position.set(-.12,.035,0);elec.add(ce); // counter
+disc(.06,mats.silver,.3,0);                     // reference
+elec.position.x=-.15;
+addPart("elec","Electrode sensor",elec,Y0-.24,-.85,.48,
+  `<p>Three electrodes turn a chemical reaction into an electrical signal. Gold lines carry each one's signal to the contacts on the tab, where the flex cable attaches.</p>
+   <p><b style="color:#6f95ff">Working electrode</b> (blue, Prussian blue on carbon) detects the hydrogen peroxide.</p>
+   <p><b>Reference electrode</b> (silver, Ag/AgCl) gives a steady voltage to compare against.</p>
+   <p><b>Counter electrode</b> (dark arc, carbon) completes the circuit.</p>`);
+
+// 7. Enzyme layer
+const enz=plate(.72,.5,.03,.1,mats.enzyme);enz.position.x=-.15;
+addPart("enzyme","Enzyme layer",enz,Y0-.27,-1.4,.36,
+  `<p>Alcohol oxidase is held on the working electrode by BSA and glutaraldehyde, which keep the enzyme stable and stuck in place.</p>
+   <p class="chem">Ethanol + O₂ → acetaldehyde + H₂O₂<br>More alcohol in sweat means more H₂O₂, which means a bigger signal.</p>`);
+
+// 8. Nafion membrane
+const naf=plate(.86,.58,.02,.12,mats.nafion);naf.position.x=-.15;
+addPart("nafion","Nafion membrane",naf,Y0-.29,-1.95,.43,
+  `<p>A thin protective film that faces your skin. It acts like a filter so mostly ethanol reaches the sensor, not the other stuff in sweat.</p>
+   <p>For testing, you can drip artificial sweat with known amounts of alcohol right onto this side.</p>`);
+
+
+/* clickable label for the strap, pinned to the clasp */
+(function(){const holder=new THREE.Object3D();const v=ep(RX+TT,RY+TT,STUD);
+  addPart("strap","Adjustable strap",holder,v.y,0,.35,
+  `<p>The band closes with a stud and holes, like a watch, so it fits different wrists. Try the S, M and L buttons: for a smaller wrist the band pulls tighter, and more of the loose end sticks out past the loop.</p>
+   <p>A snug fit really matters here: the sensor only works if it stays pressed against your skin where the sweat is.</p>`);
+  model.remove(holder);strapGroup.add(holder);holder.position.x=v.x;})();
+/* flexible ribbon cable from the electrode strip up to the board */
+const flexMat=new THREE.MeshStandardMaterial({color:0xc4862c,roughness:.35,metalness:.2,side:THREE.DoubleSide,transparent:true,opacity:.95});
+const flexTraceMat=new THREE.MeshStandardMaterial({color:0xe6c070,roughness:.25,metalness:1,side:THREE.DoubleSide});
+const flex=new THREE.Mesh(new THREE.BufferGeometry(),flexMat);model.add(flex);
+const flexTraces=[-.1,0,.1,-.1,0,.1].map(()=>{const m=new THREE.Mesh(new THREE.BufferGeometry(),flexTraceMat);model.add(m);return m});
+function ribbon(curve,w,z0,off){
+  const n=28,pos=[],idx=[];
+  for(let i=0;i<=n;i++){const p=curve.getPoint(i/n),t=curve.getTangent(i/n),nx=-t.y*off,ny=t.x*off;
+    pos.push(p.x+nx,p.y+ny,z0-w/2,p.x+nx,p.y+ny,z0+w/2)}
+  for(let i=0;i<n;i++){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2)}
+  const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g}
+let flexBuiltE=-1;
+function updateFlex(e){
+  if(Math.abs(e-flexBuiltE)<.002)return;flexBuiltE=e;
+  const ye=parts.find(p=>p.key==="elec").obj.position.y+.035,yb=parts.find(p=>p.key==="board").obj.position.y-.075,d=yb-ye;
+  const curve=new THREE.CatmullRomCurve3([new THREE.Vector3(.47,ye,0),new THREE.Vector3(.56,ye+d*.3,0),new THREE.Vector3(.56,ye+d*.7,0),new THREE.Vector3(.47,yb,0)]);
+  flex.geometry.dispose();flex.geometry=ribbon(curve,.3,0,0);
+  flexTraces.forEach((m,i)=>{m.geometry.dispose();m.geometry=ribbon(curve,.03,[-.1,0,.1][i%3],i<3?.004:-.004)});
+}
+(function(){const holder=new THREE.Object3D();holder.position.x=.56;
+  addPart("flex","Flex cable",holder,Y0-.155,-.2,.08,
+  `<p>A thin, bendy ribbon cable carries the signal from the three electrodes up to the potentiostat on the main board. Each electrode gets its own gold line, so the board can read them separately.</p>
+   <p>It plugs into a small connector under the board, which also means a worn-out sensor could be unplugged and swapped for a fresh one.</p>`);})();
+
+/* skin-side marker for the sensor stack */
+const sweat=new THREE.Group();
+for(let i=0;i<7;i++){const d=new THREE.Mesh(new THREE.SphereGeometry(.035,12,8),new THREE.MeshBasicMaterial({color:0x9fe4ff,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+  d.userData={x:-.15+(Math.random()-.5)*.5,z:(Math.random()-.5)*.35,ph:Math.random()};sweat.add(d)}
+model.add(sweat);
+
+/* ---------- Bluetooth waves ---------- */
+const waves=[];
+for(let i=0;i<3;i++){const w=new THREE.Mesh(new THREE.TorusGeometry(.35,.018,8,64,Math.PI*.9),
+  new THREE.MeshBasicMaterial({color:0x6FD2FF,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+  w.rotation.y=Math.PI/2;w.rotation.x=Math.PI*.05;w.userData.ph=i/3;model.add(w);waves.push(w)}
+
+model.position.y=-.5;
+
+/* ---------- labels ---------- */
+const labelsEl=document.getElementById("labels");
+parts.forEach(p=>{const b=document.createElement("button");b.className="lbl";b.innerHTML="<i></i>"+p.name;b.setAttribute("aria-pressed","false");
+  b.onclick=()=>select(p.key);labelsEl.appendChild(b);p.el=b});
+let selected=null;
+const info=document.getElementById("info");
+function select(k){
+  selected=selected===k?null:k;
+  parts.forEach(p=>p.el.setAttribute("aria-pressed",p.key===selected));
+  if(!selected){info.classList.add("hidden");highlight(null);return}
+  const p=parts.find(x=>x.key===k);
+  document.getElementById("infoTitle").textContent=p.name;document.getElementById("infoBody").innerHTML=p.info;
+  info.classList.remove("hidden");highlight(p);
+  if(target<.6){target=.99;syncToggle()}
+}
+document.getElementById("infoClose").onclick=()=>select(selected);
+function highlight(p){parts.forEach(q=>q.obj.traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive){
+  if(o.userData.baseEm===undefined){o.userData.baseEm=o.material.emissive.getHex();o.userData.baseEi=o.material.emissiveIntensity}
+  o.material=o.material.userData&&o.material.userData.clone?o.material:o.material.clone();o.material.userData={clone:true};
+  const on=p&&q===p;o.material.emissive.setHex(on?0x2a8cff:o.userData.baseEm);o.material.emissiveIntensity=on?.55:o.userData.baseEi}}))}
+
+/* ---------- interaction ---------- */
+let rotY=-.55,rotX=.18,dragging=false,px=0,py=0;
+const hint=document.getElementById("hint");
+cv.addEventListener("pointerdown",e=>{dragging=true;px=e.clientX;py=e.clientY;cv.setPointerCapture(e.pointerId);hint.style.opacity=0});
+cv.addEventListener("pointermove",e=>{if(!dragging)return;const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;
+  rotY+=dx*.008;rotX=Math.max(-.6,Math.min(.9,rotX+dy*.006))});
+cv.addEventListener("pointerup",()=>dragging=false);cv.addEventListener("pointercancel",()=>dragging=false);
+
+const fsBtn=document.getElementById("fsBtn");
+function syncFs(){if(fsBtn)fsBtn.textContent=document.fullscreenElement?"Exit":"Full screen"}
+if(fsBtn){
+  fsBtn.onclick=()=>{
+    if(document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  };
+  document.addEventListener("fullscreenchange",syncFs);
+}
+const toggleBtn=document.getElementById("toggleBtn");
+let ex=0,target=0;
+toggleBtn.onclick=()=>{target=target>.5?0:1;syncToggle()};
+function syncToggle(){toggleBtn.textContent=target>.5?"Put it together":"Take it apart"}
+document.querySelectorAll(".sz").forEach(b=>b.onclick=()=>{const z=SIZES[b.dataset.size];tailTarget=STUD+z.extra*GAP+.14;sizeTarget=z.k;
+  document.querySelectorAll(".sz").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+const btBtn=document.getElementById("btBtn"),phone=document.getElementById("phone");let bt=false;
+if(btBtn&&phone)btBtn.onclick=()=>{bt=!bt;btBtn.setAttribute("aria-pressed",bt);phone.classList.toggle("off",!bt)};
+
+/* ---------- demo phone readout ---------- */
+const hist=[];const bacEl=document.getElementById("bac"),spark=document.getElementById("spark");
+function demoBac(t){const h=((t/1000)%60)/60;return Math.max(0,.065*Math.sin(Math.PI*Math.min(h*1.4,1))*Math.exp(-h*.6))}
+setInterval(()=>{const v=demoBac(performance.now());hist.push(v);if(hist.length>40)hist.shift();
+  bacEl.textContent=v.toFixed(3)+"%";spark.setAttribute("points",hist.map((y,i)=>`${(i/39)*140},${42-y/.07*38}`).join(" "))},500);
+
+/* ---------- layout ---------- */
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;
+  const d=w/h<.8?18:w/h<1.2?14:11.5;camera.position.set(0,1.2,d);camera.lookAt(0,.2,0);camera.updateProjectionMatrix()}
+addEventListener("resize",resize);resize();
+
+/* ---------- loop ---------- */
+const v=new THREE.Vector3();const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+let last=performance.now();
+function frame(now){
+  const dt=Math.min((now-last)/1000,.05);last=now;
+  ex+=(target-ex)*(reduce?1:Math.min(1,dt*3.2)); if(Math.abs(target-ex)<.001)ex=target;
+  const e=ease(ex);
+  root.rotation.set(rotX,rotY,0);
+  parts.forEach(p=>p.obj.position.y=p.base+p.out*e);
+  updateFlex(e);
+  // strap fades a bit when apart so the inside is easy to see
+  mats.silicone.transparent=e>.01;mats.silicone.opacity=1-e*.55;mats.silicone.depthWrite=e<.5;
+  holeMat.transparent=e>.01;holeMat.opacity=1-e*.55;
+  tailEnd+=(tailTarget-tailEnd)*(reduce?1:Math.min(1,dt*4));if(Math.abs(tailTarget-tailEnd)<.001)tailEnd=tailTarget;
+  updateTail();
+  sizeK+=(sizeTarget-sizeK)*(reduce?1:Math.min(1,dt*4));if(Math.abs(sizeTarget-sizeK)<.0005)sizeK=sizeTarget;
+  strapGroup.scale.set(sizeK,sizeK,1);strapGroup.position.y=RY*(1-sizeK);
+
+  // sweat droplets rising into the sensor when apart
+  const nafY=parts.find(p=>p.key==="nafion").obj.position.y;
+  sweat.children.forEach(d=>{const u=((now/1000)*.35+d.userData.ph)%1;d.position.set(d.userData.x,nafY-.9+u*.85,d.userData.z);
+    d.material.opacity=e>.5&&!reduce?Math.sin(u*Math.PI)*.9*(e-.5)*2:0});
+
+  // bluetooth waves from the microcontroller
+  const bp=parts.find(p=>p.key==="board").obj.position;
+  waves.forEach(w=>{const u=((now/1000)*.55+w.userData.ph)%1;w.position.set(.75+u*2.4,bp.y+.1,0);
+    const s=.5+u*1.6;w.scale.set(s,s,s);w.material.opacity=bt&&!reduce?(1-u)*.9:bt?(w.userData.ph===0?.8:0):0});
+
+  renderer.render(scene,camera);
+
+  // labels
+  const lv=ex>.45?Math.min(1,(ex-.45)/.35):0;
+  const W=innerWidth,H=innerHeight;
+  parts.forEach(p=>{p.anchor.getWorldPosition(v);v.project(camera);
+    const x=(v.x*.5+.5)*W,y=(-v.y*.5+.5)*H;
+    p.el.style.transform=`translate(${x+4}px,${y-12}px)`;p.el.style.opacity=lv;p.el.style.pointerEvents=lv>.5?"auto":"none";p.el.tabIndex=lv>.5?0:-1});
+
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search)) {
+  document.documentElement.classList.add("embed");
+}
+</script>
+</body>
+</html>

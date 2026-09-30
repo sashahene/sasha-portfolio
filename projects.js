@@ -9,6 +9,28 @@
 
 window.PROJECTS = [
   {
+    title: "ALC ID Bracelet",
+    year: "2026",
+    description:
+      "A research library and build guide for a wearable alcohol-sensing bracelet. It keeps the studies, personal notes, an eight-week build plan, and a guide for a simpler version of the UC San Diego sensor.",
+    image: "images/alc-id-bracelet.jpg",
+    models: [
+      {
+        label: "Ideal Model",
+        src: "alc-id/site/models/exploded.html?embed=1&v=fs",
+      },
+      {
+        label: "Realistic Model",
+        src: "alc-id/site/models/prototype.html?embed=1&v=fs",
+      },
+    ],
+    tags: ["Wearable", "Sensor"],
+    categories: ["ide"],
+    github: "",
+    demo: "alc-id/site/index.html",
+    featured: true,
+  },
+  {
     title: "ATLAS Light Tower Project",
     year: "2025-2026",
     description:

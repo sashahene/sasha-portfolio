@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Slim DIY BAC Bracelet Prototype</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --line:#3B5BA8; --text:#F2F6FF; --muted:#A9B8E6; --glow:#6FD2FF;
+  --panel:rgba(10,14,28,.85); --panel-line:rgba(111,210,255,.28);
+  --font:"Exo 2","Segoe UI",system-ui,sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--text:#F2F6FF;--muted:#A9B8E6}}
+:root[data-theme="dark"]{--text:#F2F6FF;--muted:#A9B8E6}
+*,*::before,*::after{box-sizing:inherit}
+html,body{height:100%;margin:0}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{background:#000;color:var(--text);font-family:var(--font);overflow:hidden}
+.hex{position:fixed;inset:0;pointer-events:none;opacity:.55;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='168' height='97' viewBox='0 0 168 97'%3E%3Cg fill='none' stroke='%233B5BA8' stroke-width='1.2'%3E%3Cpath d='M28 0 L56 0 L70 24 L56 48.5 L28 48.5 L14 24 Z'/%3E%3Cpath d='M112 48.5 L140 48.5 L154 72.7 L140 97 L112 97 L98 72.7 Z'/%3E%3Cpath d='M70 24 L98 24 M154 72.7 L168 72.7 M0 72.7 L14 72.7'/%3E%3C/g%3E%3Cg fill='%233B5BA8'%3E%3Ccircle cx='28' cy='0' r='2.4'/%3E%3Ccircle cx='56' cy='48.5' r='2.4'/%3E%3Ccircle cx='70' cy='24' r='2.4'/%3E%3Ccircle cx='112' cy='97' r='2.4'/%3E%3Ccircle cx='154' cy='72.7' r='2.4'/%3E%3C/g%3E%3C/svg%3E");
+  background-size:168px 97px;
+  -webkit-mask-image:radial-gradient(ellipse 70% 60% at 50% 45%, transparent 35%, #000 85%);
+          mask-image:radial-gradient(ellipse 70% 60% at 50% 45%, transparent 35%, #000 85%)}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+canvas#gl:active{cursor:grabbing}
+header{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);padding:1.1rem 1.4rem;pointer-events:none;z-index:3}
+h1{margin:0;font-weight:600;font-size:clamp(1.3rem,3.4vw,2.1rem);line-height:1.1;letter-spacing:-.01em;max-width:24ch}
+header p{margin:.35rem 0 0;color:var(--muted);font-size:.95rem;max-width:46ch}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:2}
+.lbl{position:absolute;left:0;top:0;display:flex;align-items:center;gap:.45rem;pointer-events:auto;
+  background:none;border:0;color:var(--text);font:500 .88rem/1.2 var(--font);padding:.2rem .3rem;cursor:pointer;
+  white-space:nowrap;transition:opacity .25s;text-shadow:0 1px 6px #000}
+.lbl::before{content:"";width:26px;height:1px;background:var(--glow);box-shadow:0 0 6px var(--glow);flex:none}
+.lbl i{width:7px;height:7px;border-radius:50%;background:var(--glow);box-shadow:0 0 10px var(--glow);position:absolute;left:-3px}
+.lbl[aria-pressed="true"]{color:var(--glow)}
+.lbl.left{flex-direction:row-reverse}
+.lbl.left i{left:auto;right:-3px}
+.lbl:focus-visible{outline:2px solid var(--glow);outline-offset:2px;border-radius:4px}
+.controls{position:fixed;left:50%;right:auto;top:auto;bottom:calc(.7rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:4;
+  display:flex;background:transparent;border:0;padding:0;width:max-content}
+.cbtn{background:rgba(111,210,255,.12);border:1px solid var(--panel-line);color:var(--text);font:600 .88rem var(--font);
+  padding:.45rem .85rem;border-radius:9px;cursor:pointer}
+.cbtn[aria-pressed="true"]{background:var(--glow);color:#041036;border-color:var(--glow)}
+.cbtn:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+.sizes{display:flex;align-items:center;gap:.3rem;color:var(--muted);font-size:.9rem}
+.sizes span{margin-right:.2rem}
+.cbtn.sz{padding:.45rem .6rem;min-width:2.1rem}
+.info{position:fixed;left:1.2rem;right:auto;top:6.5rem;width:min(330px,calc(100% - 2.4rem));z-index:4;max-height:calc(100% - 13rem);overflow:auto;
+  background:var(--panel);border:1px solid var(--panel-line);border-radius:14px;padding:1rem 1.1rem;backdrop-filter:blur(8px);
+  transition:opacity .25s, transform .25s}
+.info.hidden{opacity:0;transform:translateY(6px);pointer-events:none}
+.info h2{margin:0 1.2rem .4rem 0;font-size:1.15rem;font-weight:600;color:var(--glow)}
+.info p{margin:.35rem 0;font-size:.93rem;line-height:1.5}
+.info .buy{font-size:.85rem;color:var(--muted);border-left:2px solid var(--glow);padding-left:.6rem}
+.info .x{position:absolute;right:.5rem;top:.35rem;background:none;border:0;color:var(--muted);font-size:1.3rem;cursor:pointer}
+.phone{position:fixed;right:1.4rem;bottom:6.5rem;z-index:3;width:170px;border-radius:26px;padding:1rem .9rem 1.1rem;
+  background:linear-gradient(160deg,#141a2e,#07090f);border:2px solid #2d3550;
+  box-shadow:0 0 30px rgba(111,210,255,.2);transition:opacity .35s, transform .35s}
+.phone.off{opacity:0;transform:translateY(10px);pointer-events:none}
+.phone .notch{width:46px;height:5px;border-radius:3px;background:#2d3550;margin:0 auto .8rem}
+.phone .bt{font-size:.75rem;color:var(--glow);display:flex;align-items:center;gap:.35rem}
+.phone .bt::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--glow);box-shadow:0 0 8px var(--glow)}
+.phone .val{font-size:2.1rem;font-weight:700;margin:.4rem 0 0;line-height:1}
+.phone .cap{font-size:.78rem;color:var(--muted)}
+.phone svg{width:100%;height:44px;margin-top:.5rem}
+.phone .demo{font-size:.68rem;color:var(--muted);margin-top:.35rem}
+@media (max-width:720px){
+  .info{top:auto;bottom:calc(8.2rem + env(safe-area-inset-bottom,0px));right:.75rem;max-height:45%}
+  .phone{right:.75rem;bottom:calc(8.2rem + env(safe-area-inset-bottom,0px));width:140px;padding:.8rem .75rem}
+  .phone .val{font-size:1.7rem}
+  .lbl{font-size:.78rem}
+  .lbl::before{width:16px}
+}
+
+html.embed header, html.embed .hex, html.embed .hint, html.embed .phone { display: none !important; }
+.fsbtn{position:fixed;right:.7rem;bottom:calc(.7rem + env(safe-area-inset-bottom,0px));z-index:4}
+html.embed .controls { bottom: .45rem; }
+html.embed .fsbtn { right: .45rem; bottom: .45rem; }
+html.embed .cbtn { font-size: .72rem; padding: .32rem .55rem; }
+html.embed .info { top: .45rem; left: .45rem; right: auto; width: min(190px, 52%); max-height: 70%; }
+</style>
+</head>
+<body>
+<div class="hex" aria-hidden="true"></div>
+<canvas id="gl" aria-label="3D model of the DIY prototype. Drag to rotate."></canvas>
+<div id="labels"></div>
+
+<header>
+  <h1>The build-it-yourself prototype</h1>
+  <p>Every part here can be bought or 3D printed. Drag to turn it, and tap a part to see what it does.</p>
+</header>
+
+<aside class="info hidden" id="info" aria-live="polite">
+  <button class="x" id="infoClose" aria-label="Close">×</button>
+  <h2 id="infoTitle"></h2>
+  <div id="infoBody"></div>
+</aside>
+
+<div class="phone off" id="phone" aria-label="Phone app preview">
+  <div class="notch"></div>
+  <div class="bt">Bluetooth connected</div>
+  <div class="val" id="lvl">0</div>
+  <div class="cap">alcohol vapor reading</div>
+  <svg viewBox="0 0 140 44" preserveAspectRatio="none"><polyline id="spark" fill="none" stroke="#6FD2FF" stroke-width="2" points=""/></svg>
+  <div class="demo">Demo numbers, not real data</div>
+</div>
+
+<div class="controls">
+  <button class="cbtn" id="toggleBtn">Take it apart</button>
+</div>
+<button class="cbtn fsbtn" id="fsBtn" type="button">Full screen</button>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+const reduce=matchMedia("(prefers-reduced-motion: reduce)").matches;
+const cv=document.getElementById("gl");
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.05;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(34,1,.1,100);
+(function(){
+  const env=new THREE.Scene();
+  env.add(new THREE.Mesh(new THREE.SphereGeometry(20,32,16),new THREE.MeshBasicMaterial({color:0x0c0c0e,side:THREE.BackSide})));
+  const panel=(w,h,c,x,y,z)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:THREE.DoubleSide}));m.position.set(x,y,z);m.lookAt(0,0,0);env.add(m)};
+  panel(14,3,0xffffff,0,12,4); panel(10,4,0xd8d8dc,-12,3,-4); panel(6,8,0xbfbfc4,12,2,6); panel(12,2,0xe6e6ea,4,-6,12); panel(8,6,0xffffff,0,2,-14);
+  scene.environment=new THREE.PMREMGenerator(renderer).fromScene(env,0.03).texture;
+})();
+scene.add(new THREE.HemisphereLight(0xe8e8ec,0x111114,.7));
+const key=new THREE.DirectionalLight(0xffffff,1.3);key.position.set(4,8,6);scene.add(key);
+const rim=new THREE.DirectionalLight(0xffffff,1.8);rim.position.set(-6,3,-6);scene.add(rim);
+const rim2=new THREE.DirectionalLight(0xf2f2f5,1.2);rim2.position.set(6,1,-5);scene.add(rim2);
+
+/* ---------- helpers (sizes in millimeters) ---------- */
+function rrShape(w,d,r){const s=new THREE.Shape(),x=-w/2,y=-d/2;r=Math.min(r,w/2,d/2);
+  s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.quadraticCurveTo(x+w,y,x+w,y+r);s.lineTo(x+w,y+d-r);s.quadraticCurveTo(x+w,y+d,x+w-r,y+d);
+  s.lineTo(x+r,y+d);s.quadraticCurveTo(x,y+d,x,y+d-r);s.lineTo(x,y+r);s.quadraticCurveTo(x,y,x+r,y);return s}
+function rrPath(w,d,r,cx=0,cz=0){const p=new THREE.Path(),x=cx-w/2,y=-cz-d/2;r=Math.min(r,w/2,d/2);
+  p.moveTo(x+r,y);p.lineTo(x+w-r,y);p.quadraticCurveTo(x+w,y,x+w,y+r);p.lineTo(x+w,y+d-r);p.quadraticCurveTo(x+w,y+d,x+w-r,y+d);
+  p.lineTo(x+r,y+d);p.quadraticCurveTo(x,y+d,x,y+d-r);p.lineTo(x,y+r);p.quadraticCurveTo(x,y,x+r,y);return p}
+function circlePath(r,cx,cz){const p=new THREE.Path();p.absarc(cx,-cz,r,0,Math.PI*2,true);return p}
+function plate(w,d,t,r,mat,holes,bevel){
+  const s=rrShape(w,d,r);if(holes)holes.forEach(h=>s.holes.push(h));
+  const bv=bevel||0;
+  const g=new THREE.ExtrudeGeometry(s,{depth:Math.max(.01,t-bv*2),bevelEnabled:!!bv,bevelSize:bv,bevelThickness:bv,bevelSegments:3,curveSegments:20});
+  g.rotateX(-Math.PI/2);g.computeBoundingBox();const bb=g.boundingBox;g.translate(0,-(bb.max.y+bb.min.y)/2,0);return new THREE.Mesh(g,mat)}
+const box=(w,h,d,mat,x=0,y=0,z=0)=>{const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);return m};
+const cyl=(r,h,mat,x=0,y=0,z=0,seg=32)=>{const m=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,seg),mat);m.position.set(x,y,z);return m};
+const M=o=>new THREE.MeshStandardMaterial(o);
+const mats={
+  shell:new THREE.MeshPhysicalMaterial({color:0x0f0f11,roughness:.42,metalness:.05,clearcoat:.5,clearcoatRoughness:.3,envMapIntensity:1.3}),
+  lid:new THREE.MeshPhysicalMaterial({color:0x0b0b0c,roughness:.18,metalness:.05,clearcoat:1,clearcoatRoughness:.08,envMapIntensity:1.4}),
+  hole:M({color:0x000000,roughness:1}),
+  strap:M({color:0x151517,roughness:.85,envMapIntensity:.9}),
+  steel:M({color:0xb8bec9,roughness:.25,metalness:1}),
+  steelDark:M({color:0x7e8592,roughness:.3,metalness:1}),
+  pcbBlack:M({color:0x1b1b1f,roughness:.5,metalness:.1}),
+  pcbGrove:M({color:0x1f4fa8,roughness:.45,metalness:.1}),
+  can:M({color:0xc4c9d1,roughness:.25,metalness:.9}),
+  gold:M({color:0xd6a646,roughness:.25,metalness:1}),
+  chip:M({color:0x15161c,roughness:.35,metalness:.3}),
+  usb:M({color:0xb9bec7,roughness:.3,metalness:.9}),
+  sensorBody:M({color:0xe8e6df,roughness:.6}),
+  mesh:M({color:0x8d8f94,roughness:.4,metalness:.8}),
+  lipo:M({color:0xc9ccd3,roughness:.3,metalness:.8}),
+  lipoLabel:M({color:0x2c2f36,roughness:.6}),
+  lipoTape:M({color:0xe0b94a,roughness:.6}),
+  fpc:M({color:0xc4862c,roughness:.4,metalness:.2,side:THREE.DoubleSide}),
+  ledRed:M({color:0xff3b3b,emissive:0xff2020,emissiveIntensity:.8}),
+  button:M({color:0xdedede,roughness:.5}),
+  seal:M({color:0x3a3b40,roughness:.9,transparent:true,opacity:.92}),
+  resBody:M({color:0xd9c39a,roughness:.6}),
+  ledGlow:M({color:0x9fc8ff,emissive:0x3d7bff,emissiveIntensity:1,roughness:.3}),
+  ring:new THREE.MeshPhysicalMaterial({color:0x3d7bff,roughness:.25,transmission:0,transparent:true,opacity:.95,emissive:0x3d7bff,emissiveIntensity:.6})
+};
+
+const MM=1/15;
+const root=new THREE.Group();scene.add(root);
+const model=new THREE.Group();model.scale.setScalar(MM);root.add(model);
+model.position.y=-1.45;
+
+/* ---------- watch-style strap with holes, stud and keeper ---------- */
+const RX=34,RY=22,TH=3,TT=2.4,WTOP=38,WBOT=26,SW=WBOT;
+/* strap width: wide where it meets the case, narrowing toward the clasp */
+const strapW=a=>{const s=(Math.sin(a)+1)/2;return WBOT+(WTOP-WBOT)*s*s*(3-2*s)};
+function taperBand(rx,ry,th,a0,a1,wf){
+  const n=Math.max(8,Math.ceil(Math.abs(a1-a0)*48)),pos=[],idx=[];
+  const pt=(outer,i,side)=>{const a=a0+(a1-a0)*i/n,v=outer?ep(rx,ry,a):ep(rx-th,ry-th,a);return [v.x,v.y,side*wf(a)/2]};
+  const strip=(fa,fb)=>{const s=pos.length/3;for(let i=0;i<=n;i++){pos.push(...fa(i),...fb(i))}
+    for(let i=0;i<n;i++){const k=s+i*2;idx.push(k,k+1,k+3,k,k+3,k+2)}};
+  strip(i=>pt(1,i,1),i=>pt(1,i,-1));strip(i=>pt(0,i,-1),i=>pt(0,i,1));
+  strip(i=>pt(0,i,1),i=>pt(1,i,1));strip(i=>pt(1,i,-1),i=>pt(0,i,-1));
+  [0,n].forEach(i=>{const s=pos.length/3;pos.push(...pt(1,i,1),...pt(1,i,-1),...pt(0,i,-1),...pt(0,i,1));idx.push(s,s+1,s+2,s,s+2,s+3)});
+  const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g}
+const B=-Math.PI/2,STUD=B+.3,GAP=.13;
+const SIZES={S:{extra:5,k:.9},M:{extra:3,k:1},L:{extra:1,k:1.1}};
+const ep=(rx,ry,a)=>new THREE.Vector2(rx*Math.cos(a),ry*Math.sin(a));
+function arcBand(rx,ry,th,a0,a1,width){
+  const s=new THREE.Shape(),n=Math.max(8,Math.ceil(Math.abs(a1-a0)*40));
+  for(let i=0;i<=n;i++){const a=a0+(a1-a0)*i/n,v=ep(rx,ry,a);i?s.lineTo(v.x,v.y):s.moveTo(v.x,v.y)}
+  for(let i=n;i>=0;i--){const a=a0+(a1-a0)*i/n,v=ep(rx-th,ry-th,a);s.lineTo(v.x,v.y)}
+  const g=new THREE.ExtrudeGeometry(s,{depth:width-.8,bevelEnabled:true,bevelSize:.35,bevelThickness:.4,bevelSegments:2,curveSegments:4});
+  g.translate(0,0,-(width-.8)/2);return g}
+const strapGroup=new THREE.Group();model.add(strapGroup);
+mats.strap.side=THREE.DoubleSide;
+const CASE_END=Math.acos(21/RX);   // strap ends tuck into the case ends, leaving the underside free for the skin seal
+strapGroup.add(new THREE.Mesh(taperBand(RX,RY,TH,B,CASE_END,strapW),mats.strap));
+strapGroup.add(new THREE.Mesh(taperBand(RX,RY,TH,Math.PI-CASE_END,B+2*Math.PI-.45,strapW),mats.strap));
+const tailW=a=>strapW(a)-1.5;
+const tail=new THREE.Mesh(taperBand(RX+TT+.2,RY+TT+.2,TT,B-.55,1,tailW),mats.strap);strapGroup.add(tail);
+const holeMat=M({color:0x000000,roughness:1});const holes=[];
+for(let j=1;j<=5;j++){const h=cyl(1.1,.4,holeMat,0,0,0,20);const a=STUD+j*GAP,v=ep(RX+TT+.25,RY+TT+.25,a);
+  h.position.set(v.x,v.y,0);h.rotation.z=a-Math.PI/2;strapGroup.add(h);holes.push({h,a})}
+const stud=new THREE.Group();stud.add(cyl(1.6,.6,mats.steel,0,.1,0,24));
+const sr=new THREE.Mesh(new THREE.TorusGeometry(1.6,.2,8,24),mats.steelDark);sr.rotation.x=Math.PI/2;sr.position.y=.35;stud.add(sr);
+(function(){const v=ep(RX+TT+.45,RY+TT+.45,STUD);stud.position.set(v.x,v.y,0);stud.rotation.z=STUD-Math.PI/2})();strapGroup.add(stud);
+(function(){const a=STUD+.22,len=TH+TT+3.6;
+  const k=plate(len,SW+3,1.8,.6,mats.strap,[rrPath(len-1.4,SW+.9,.4)]);
+  const v=ep(RX+(TT-TH)/2+.1,RY+(TT-TH)/2+.1,a);k.position.set(v.x,v.y,0);k.rotation.z=a;strapGroup.add(k)})();
+let tailEnd=STUD+3*GAP+.14,tailTarget=tailEnd,builtEnd=-9,sizeK=1,sizeTarget=1;
+function updateTail(){
+  if(Math.abs(tailEnd-builtEnd)>.002){tail.geometry.dispose();tail.geometry=taperBand(RX+TT+.2,RY+TT+.2,TT,B-.55,tailEnd,tailW);builtEnd=tailEnd}
+  holes.forEach(o=>o.h.visible=o.a<tailEnd-.08)}
+
+/* ---------- parts ---------- */
+const parts=[];
+function addPart(key,name,obj,base,out,anchor,info,left){obj.position.y=base;model.add(obj);
+  const a=new THREE.Object3D();a.position.copy(anchor);obj.add(a);parts.push({key,name,obj,base,out,anchor:a,info,leftLabel:!!left})}
+const V=(x,y,z)=>new THREE.Vector3(x,y,z);
+const pin=(parent,x,y,z)=>{const o=new THREE.Object3D();o.position.set(x,y,z);parent.add(o);return o};
+
+/* ---------- case: tapered, rounded body whose underside follows the wrist ---------- */
+const W0=46,D0=48,R0=8,TOPY=33.2,FLOOR=23.2,TAPER=1,ROUND=1.2,WI=39.6,DI=41.6,RI=5.5;
+const yb=x=>RY*Math.sqrt(Math.max(0,1-(x/RX)**2))-.4;
+function outline(w,d,r,seg=8){const pts=[],cx=w/2-r,cz=d/2-r;
+  [[cx,cz,0],[-cx,cz,Math.PI/2],[-cx,-cz,Math.PI],[cx,-cz,Math.PI*1.5]].forEach(([x,z,a0])=>{
+    for(let i=0;i<=seg;i++){const a=a0+(i/seg)*Math.PI/2;pts.push([x+r*Math.cos(a),z+r*Math.sin(a)])}});return pts}
+function insetAt(t){let v=TAPER*t;if(t>.72){const u=(t-.72)/.28;v+=ROUND*(1-Math.sqrt(Math.max(0,1-u*u)))}return v}
+function buildBody(){
+  const pos=[],idx=[],L=14;
+  const ring=pts=>{const s=pos.length/3;pts.forEach(p=>pos.push(p[0],p[1],p[2]));return s};
+  const join=(a,b,n)=>{for(let i=0;i<n;i++){const j=(i+1)%n;idx.push(a+i,b+i,b+j,a+i,b+j,a+j)}};
+  const fan=(s,n,c)=>{const ci=pos.length/3;pos.push(c[0],c[1],c[2]);for(let i=0;i<n;i++)idx.push(ci,s+i,s+(i+1)%n)};
+  let prev=-1,n=0,first=-1;
+  for(let l=0;l<=L;l++){const t=l/L,ins=insetAt(t);
+    const o=outline(W0-2*ins,D0-2*ins,Math.max(1.5,R0-ins));n=o.length;
+    const r=ring(o.map(([x,z])=>[x,yb(x)*(1-t)+TOPY*t,z]));
+    if(prev>=0)join(prev,r,n);else first=r;prev=r}
+  fan(first,n,[0,yb(0),0]);
+  const topOuter=ring(outline(W0-2*insetAt(1),D0-2*insetAt(1),Math.max(1.5,R0-insetAt(1))).map(([x,z])=>[x,TOPY,z]));
+  const inTop=ring(outline(WI,DI,RI).map(([x,z])=>[x,TOPY,z]));join(topOuter,inTop,n);
+  const inTop2=ring(outline(WI,DI,RI).map(([x,z])=>[x,TOPY,z]));
+  const inBot=ring(outline(WI,DI,RI).map(([x,z])=>[x,FLOOR,z]));join(inTop2,inBot,n);
+  const floorR=ring(outline(WI,DI,RI).map(([x,z])=>[x,FLOOR,z]));fan(floorR,n,[0,FLOOR,0]);
+  const g=new THREE.BufferGeometry();g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();return g}
+mats.shell.side=THREE.DoubleSide;
+
+/* where the sensors sit (they face down, toward the skin) */
+const SENS_X=-11.3,SZ=[-12,-4,4,12];
+const VENT_COLS=[SENS_X-2.8,SENS_X,SENS_X+2.8];
+const tray=new THREE.Group();
+tray.add(new THREE.Mesh(buildBody(),mats.shell));
+tray.add(box(9.8,3.8,.3,mats.hole,10.5,25.5,-23.2));                           // USB-C opening
+// honeycomb vents through the floor, right under the sensors
+VENT_COLS.forEach((x,ci)=>{for(let k=0;k<10;k++){const z=-14.4+k*3.2+(ci%2?1.6:0);if(Math.abs(z)>15.5)continue;
+  const lo=yb(x)-.08,hi=FLOOR+.08,h=cyl(1.3,hi-lo,mats.hole,x,(lo+hi)/2,z,6);tray.add(h)}});
+addPart("case","Case",tray,0,0,V(23.5,18.5,0),
+  `<p>The body tapers inward and rolls over at the top edge so it looks slimmer, and the underside follows the curve of the wrist.</p>
+   <p>The honeycomb vents are now on the <b>bottom</b>, right under the gas sensors, so the sensor only sniffs vapor coming off your skin instead of the air in the room.</p>
+   <p class="buy">About 46 × 48 mm at the base and 13 mm tall. For a smooth finish, order it printed in resin or nylon, or sand and paint a regular print.</p>`);
+
+/* soft silicone seal around the vents: makes a closed pocket against the skin */
+(function(){
+  const seal=plate(13,37,1.2,4,mats.seal,[rrPath(9.6,33.6,2.6)]);
+  const pa=seal.geometry.attributes.position;
+  for(let i=0;i<pa.count;i++){const x=pa.getX(i)+SENS_X,y=pa.getY(i);pa.setY(i,yb(x)-.6+y)}
+  pa.needsUpdate=true;seal.geometry.computeVertexNormals();seal.position.x=SENS_X;
+  const g=new THREE.Group();g.add(seal);
+  addPart("seal","Skin seal",g,0,-9,V(SENS_X-6.5,yb(SENS_X-6.5)-.6,0),
+  `<p>A soft silicone ring presses gently against your wrist around the vents. It creates a small closed pocket, so alcohol vapor from your skin collects there for the sensor, and outside air (like someone's drink or hand sanitizer nearby) stays out.</p>
+   <p>This is much closer to how real alcohol-tracking wearables sample through the skin.</p>
+   <p class="buy">Cut it from a thin silicone sheet, or print it in flexible TPU. A breathable PTFE vent sticker over the holes would also keep sweat out while letting vapor through.</p>`,true);
+})();
+
+/* flat antenna on the floor */
+const ant=new THREE.Group();
+ant.add(box(16,.25,6,mats.fpc));
+for(let i=0;i<3;i++)ant.add(box(12,.1,.5,mats.gold,0,.15,-1.6+i*1.6));
+ant.position.set(10.5,0,11);
+const aPad=pin(ant,-7.5,.3,0);
+addPart("antenna","Antenna",ant,23.4,4,V(8,0,0),
+  `<p>The small flat antenna that comes with the XIAO lies on the floor of the case and plugs into the tiny gold connector on the board. Plastic lets Bluetooth through, so it works from inside.</p>`);
+
+/* gas sensor board, flipped so the sensors face the skin */
+const gas=new THREE.Group();
+gas.add(plate(20,40,1.6,1,mats.pcbGrove));
+SZ.forEach(z=>{gas.add(cyl(2.6,2.2,mats.sensorBody,2,1.9,z,24));gas.add(cyl(1.9,.2,mats.mesh,2,3.05,z,24))});
+gas.add(box(5,1,5,mats.chip,-5,1.3,16));
+for(let i=0;i<4;i++)gas.add(box(1.6,.2,1.6,mats.gold,-4.5+i*3,.9,-18.3));
+gas.rotation.z=Math.PI;gas.position.set(-9.3,0,0);
+const gV=pin(gas,-4.5,1,-18.3),gG=pin(gas,-1.5,1,-18.3),gSda=pin(gas,1.5,1,-18.3),gScl=pin(gas,4.5,1,-18.3);
+addPart("gas","Gas sensor (Grove V2)",gas,26.4,10,V(10,0,0),
+  `<p>The same sensor board, now flipped upside down so its four tiny sensors face the vents in the bottom of the case, right above your skin.</p>
+   <p>Its heater uses very little power, so it stays close to skin temperature, but it's still worth checking by touch during your first tests.</p>
+   <p class="buy">Seeed Grove Multichannel Gas Sensor V2. Warm it up for at least 24 hours before first use.</p>`,true);
+
+/* XIAO ESP32-C3 */
+const xiao=new THREE.Group();
+xiao.add(plate(17.5,21,1.2,1,mats.pcbBlack));
+xiao.add(box(12,2.4,12.5,mats.can,0,1.8,1.8));
+xiao.add(box(9,3.2,7.5,mats.usb,0,1.1,-9.8));
+xiao.add(box(1.8,.8,1.8,mats.gold,5,1,-6.5));
+xiao.add(box(1.2,.9,1.8,mats.button,-6.5,1.05,-5));xiao.add(box(1.2,.9,1.8,mats.button,6.5,1.05,-5));
+for(let i=0;i<7;i++)[-1,1].forEach(s=>xiao.add(box(1.4,1.25,1.4,mats.gold,s*8.1,0,-7.62+i*2.54)));
+xiao.add(box(1.2,.2,1.6,mats.gold,-1.2,-.7,4));xiao.add(box(1.2,.2,1.6,mats.gold,1.2,-.7,4));
+xiao.position.set(10.5,0,-10);
+const xUfl=pin(xiao,5,1.4,-6.5),xBatP=pin(xiao,-1.2,-.8,4),xBatN=pin(xiao,1.2,-.8,4);
+const x3v3=pin(xiao,8.1,.7,-7.62+2*2.54),xGnd=pin(xiao,8.1,.7,-7.62+2.54),xSda=pin(xiao,-8.1,.7,-7.62+4*2.54),xScl=pin(xiao,-8.1,.7,-7.62+5*2.54);
+const xLed=pin(xiao,8.1,.7,-7.62+6*2.54);
+addPart("xiao","XIAO ESP32-C3",xiao,24.4,12,V(9,0,0),
+  `<p>The brain: it reads the gas sensor, sends readings to your phone over Bluetooth, charges the battery through USB-C, and now also controls the status light.</p>
+   <p class="buy">Seeed Studio XIAO ESP32-C3 (the 3-pack comes with headers and spares).</p>`);
+
+/* battery, now on top of the boards */
+const batt=new THREE.Group();
+batt.add(plate(35,25,5,1.5,mats.lipo));
+const lab=plate(28,18,.2,.8,mats.lipoLabel);lab.position.set(0,2.6,1);batt.add(lab);
+batt.add(box(4,.8,2,mats.lipoTape,8,0,-13));
+const bPlus=pin(batt,7.2,-.4,-13.4),bMinus=pin(batt,8.8,-.4,-13.4);
+addPart("battery","Battery",batt,30.3,22,V(17.5,0,0),
+  `<p>A flat 3.7 V LiPo of about 420 mAh. It moved to the top layer so the sensor could sit at the bottom, closest to your skin.</p>
+   <p class="buy">Adafruit 3.7 V 420 mAh with short cable. I modeled it at about 35 × 25 × 5 mm; check the exact size on the listing before you design the real case.</p>`);
+
+/* status LED that lights up the accent ring */
+const led=new THREE.Group();
+led.add(box(3.2,.6,2.6,mats.pcbBlack));
+const dome=cyl(1,1.2,mats.ledGlow,0,.9,0,20);dome.userData.glow=true;led.add(dome);
+const resistor=cyl(.5,2.6,mats.resBody,-2.6,.3,0,12);resistor.rotation.z=Math.PI/2;led.add(resistor);
+led.position.set(17,0,18.5);
+const ledPad=pin(led,-4,.2,0);
+addPart("led","Status light",led,31,30,V(3,0,0),
+  `<p>A tiny LED shines into the blue ring around the lid, which works like a light pipe and makes the whole edge glow.</p>
+   <p>In the model it slowly "breathes" while idle and shines steady when Bluetooth is connected. You could also use it for things like a quick flash each time a reading is taken, or a color warning when the battery is low.</p>
+   <p class="buy">One small LED (a single-color one, or an RGB one for multiple colors) plus a resistor of about 220 Ω, wired to a spare pin on the XIAO. The ring can be printed in translucent filament.</p>`);
+
+/* lid: solid glossy face with a glowing accent ring */
+const lidG=new THREE.Group();
+const TW=W0-2*insetAt(1),TD=D0-2*insetAt(1),TR=Math.max(1.5,R0-insetAt(1));
+const accent=plate(TW,TD,.35,TR,mats.ring,[rrPath(TW-1.4,TD-1.4,TR-.7)]);accent.position.y=-.65;accent.userData.glow=true;lidG.add(accent);
+const face=plate(TW-1.4,TD-1.4,1.3,TR-.7,mats.lid,null,.4);face.position.y=.15;lidG.add(face);
+addPart("lid","Lid",lidG,TOPY+.8,36,V(TW/2,0,0),
+  `<p>With the vents moved underneath, the top is now one clean glossy face, like a watch screen.</p>
+   <p>The blue ring around the edge is translucent, so the status light glows through it.</p>
+   <p class="buy">Print the face on a smooth build plate for a glossy finish, and the ring in translucent blue filament.</p>`);
+
+/* ---------- wires ---------- */
+const wireDefs=[
+  {from:x3v3,to:gV,color:0xd23b3b,r:.4,bend:[-3,4]},
+  {from:xGnd,to:gG,color:0x4a4a52,r:.4,bend:[-5,4]},
+  {from:xSda,to:gSda,color:0x3a8fe0,r:.4,bend:[-5,3]},
+  {from:xScl,to:gScl,color:0xe8c547,r:.4,bend:[-3,3]},
+  {from:bPlus,to:xBatP,color:0xd23b3b,r:.35,bend:[0,-1.5]},
+  {from:bMinus,to:xBatN,color:0x4a4a52,r:.35,bend:[0,-1.5]},
+  {from:xUfl,to:aPad,color:0x18181a,r:.3,bend:[1,3]},
+  {from:xLed,to:ledPad,color:0xe58a2e,r:.35,bend:[2,4]}
+];
+const wires=wireDefs.map(d=>{const m=new THREE.Mesh(new THREE.BufferGeometry(),M({color:d.color,roughness:.45}));model.add(m);return {...d,m}});
+const wv=new THREE.Vector3(),wv2=new THREE.Vector3();let wiresBuiltE=-1;
+function localPos(obj,out){obj.getWorldPosition(out);return model.worldToLocal(out)}
+function updateWires(e){
+  if(Math.abs(e-wiresBuiltE)<.002)return;wiresBuiltE=e;root.updateMatrixWorld(true);
+  wires.forEach(w=>{const a=localPos(w.from,wv).clone(),b=localPos(w.to,wv2).clone();
+    const dy=Math.abs(b.y-a.y),lift=w.bend[1]*(1+dy*.04);
+    const mid=a.clone().lerp(b,.5).add(V(w.bend[0],lift,0));
+    const c1=a.clone().lerp(mid,.5).add(V(0,lift*.3,0)),c2=b.clone().lerp(mid,.5).add(V(0,lift*.3,0));
+    w.m.geometry.dispose();w.m.geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3([a,c1,mid,c2,b]),40,w.r,6,false)});
+}
+(function(){const h=new THREE.Object3D();h.position.set(-W0/2-4,0,0);
+  addPart("wires","Wires",h,30,-8,V(0,0,0),
+  `<p>Only a few connections now. Four wires link the gas sensor to the XIAO: power (red), ground (gray), and two data lines (blue and yellow) for its I2C connection. Two short leads connect the battery through a small plug, a thin cable runs to the antenna, and an orange wire drives the status light.</p>
+   <p class="buy">Thin silicone wire soldered in place is the most compact. A Grove-to-jumper cable works while testing.</p>`,true);})();
+
+/* ---------- Bluetooth waves from the antenna ---------- */
+const waves=[];
+for(let i=0;i<3;i++){const w=new THREE.Mesh(new THREE.TorusGeometry(5,.3,8,64,Math.PI*.9),
+  new THREE.MeshBasicMaterial({color:0x6FD2FF,transparent:true,opacity:0,blending:THREE.AdditiveBlending,depthWrite:false}));
+  w.rotation.y=Math.PI/2;w.userData.ph=i/3;model.add(w);waves.push(w)}
+
+/* ---------- labels + info ---------- */
+const labelsEl=document.getElementById("labels");
+parts.forEach(p=>{const b=document.createElement("button");b.className="lbl";b.innerHTML="<i></i>"+p.name;b.setAttribute("aria-pressed","false");
+  if(p.leftLabel)b.classList.add("left");b.onclick=()=>select(p.key);labelsEl.appendChild(b);p.el=b});
+let selected=null;const info=document.getElementById("info");
+function select(k){
+  selected=selected===k?null:k;
+  parts.forEach(p=>p.el.setAttribute("aria-pressed",p.key===selected));
+  if(!selected){info.classList.add("hidden");highlight(null);return}
+  const p=parts.find(x=>x.key===k);
+  document.getElementById("infoTitle").textContent=p.name;document.getElementById("infoBody").innerHTML=p.info;
+  info.classList.remove("hidden");highlight(p);
+  if(target<.6){target=1;syncToggle()}
+}
+document.getElementById("infoClose").onclick=()=>select(selected);
+function highlight(p){parts.forEach(q=>q.obj.traverse(o=>{if(o.isMesh&&o.material&&o.material.emissive){
+  if(!o.userData.own){o.material=o.material.clone();o.userData.own=true;o.userData.baseEm=o.material.emissive.getHex();o.userData.baseEi=o.material.emissiveIntensity}
+  const on=p&&q===p;o.material.emissive.setHex(on?0x2a8cff:o.userData.baseEm);o.material.emissiveIntensity=on?.45:o.userData.baseEi}}))}
+
+/* ---------- interaction ---------- */
+let rotY=-.6,rotX=.28,dragging=false,px=0,py=0;
+cv.addEventListener("pointerdown",e=>{dragging=true;px=e.clientX;py=e.clientY;cv.setPointerCapture(e.pointerId)});
+cv.addEventListener("pointermove",e=>{if(!dragging)return;const dx=e.clientX-px,dy=e.clientY-py;px=e.clientX;py=e.clientY;
+  rotY+=dx*.008;rotX=Math.max(-.6,Math.min(1.1,rotX+dy*.006))});
+cv.addEventListener("pointerup",()=>dragging=false);cv.addEventListener("pointercancel",()=>dragging=false);
+const fsBtn=document.getElementById("fsBtn");
+function syncFs(){if(fsBtn)fsBtn.textContent=document.fullscreenElement?"Exit":"Full screen"}
+if(fsBtn){
+  fsBtn.onclick=()=>{
+    if(document.fullscreenElement) document.exitFullscreen();
+    else document.documentElement.requestFullscreen();
+  };
+  document.addEventListener("fullscreenchange",syncFs);
+}
+const toggleBtn=document.getElementById("toggleBtn");let ex=0,target=0;
+toggleBtn.onclick=()=>{target=target>.5?0:1;syncToggle()};
+function syncToggle(){toggleBtn.textContent=target>.5?"Put it together":"Take it apart"}
+document.querySelectorAll(".sz").forEach(b=>b.onclick=()=>{const z=SIZES[b.dataset.size];tailTarget=STUD+z.extra*GAP+.14;sizeTarget=z.k;
+  document.querySelectorAll(".sz").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+const btBtn=document.getElementById("btBtn"),phone=document.getElementById("phone");let bt=false;
+if(btBtn&&phone)btBtn.onclick=()=>{bt=!bt;btBtn.setAttribute("aria-pressed",bt);phone.classList.toggle("off",!bt)};
+const hist=[],lvlEl=document.getElementById("lvl"),spark=document.getElementById("spark");
+setInterval(()=>{const h=((performance.now()/1000)%40)/40,v=Math.round(180+1400*Math.max(0,Math.sin(Math.PI*Math.min(h*1.6,1)))*Math.exp(-h*1.2)+Math.random()*25);
+  hist.push(v);if(hist.length>40)hist.shift();lvlEl.textContent=v;
+  spark.setAttribute("points",hist.map((y,i)=>`${(i/39)*140},${42-(y/1700)*38}`).join(" "))},500);
+
+function resize(){const w=innerWidth,h=innerHeight;renderer.setSize(w,h,false);camera.aspect=w/h;
+  const d=w/h<.8?17:w/h<1.2?13.5:11.5;camera.position.set(0,1.4,d);camera.lookAt(0,.2,0);camera.updateProjectionMatrix()}
+addEventListener("resize",resize);resize();
+
+const v=new THREE.Vector3();const ease=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+let last=performance.now();
+function frame(now){
+  const dt=Math.min((now-last)/1000,.05);last=now;
+  ex+=(target-ex)*(reduce?1:Math.min(1,dt*3.2));if(Math.abs(target-ex)<.001)ex=target;
+  const e=ease(ex);
+  root.rotation.set(rotX,rotY,0);
+  parts.forEach(p=>p.obj.position.y=p.base+p.out*e);
+  {const breathe=.35+.65*(.5+.5*Math.sin(now/1000*2.2)),gi=bt?1.4:(reduce?.8:breathe*1.2);
+   parts.forEach(p=>{if(p.key===selected)return;p.obj.traverse(o=>{if(o.isMesh&&o.userData.glow)o.material.emissiveIntensity=gi})})}
+  mats.strap.transparent=e>.01;mats.strap.opacity=1-e*.55;mats.strap.depthWrite=e<.5;holeMat.transparent=e>.01;holeMat.opacity=1-e*.55;
+  tailEnd+=(tailTarget-tailEnd)*(reduce?1:Math.min(1,dt*4));if(Math.abs(tailTarget-tailEnd)<.001)tailEnd=tailTarget;
+  sizeK+=(sizeTarget-sizeK)*(reduce?1:Math.min(1,dt*4));if(Math.abs(sizeTarget-sizeK)<.0005)sizeK=sizeTarget;
+  strapGroup.scale.set(sizeK,sizeK,1);strapGroup.position.y=RY*(1-sizeK);
+  updateTail();updateWires(e);
+  const ay=parts.find(p=>p.key==="antenna").obj.position.y;
+  waves.forEach(w=>{const u=((now/1000)*.55+w.userData.ph)%1;w.position.set(18+u*34,ay,11);
+    const s=.5+u*1.6;w.scale.set(s,s,s);w.material.opacity=bt&&!reduce?(1-u)*.9:bt?(w.userData.ph===0?.8:0):0});
+  renderer.render(scene,camera);
+  const lv=ex>.45?Math.min(1,(ex-.45)/.35):0,W=innerWidth,H=innerHeight;
+  parts.forEach(p=>{p.anchor.getWorldPosition(v);v.project(camera);
+    const x=(v.x*.5+.5)*W,y=(-v.y*.5+.5)*H,off=p.leftLabel?-(p.el.offsetWidth-4):4;
+    p.el.style.transform=`translate(${x+off}px,${y-12}px)`;p.el.style.opacity=lv;p.el.style.pointerEvents=lv>.5?"auto":"none";p.el.tabIndex=lv>.5?0:-1});
+  requestAnimationFrame(frame);
+}
+updateTail();requestAnimationFrame(frame);
+})();
+</script>
+
+<script>
+if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search)) {
+  document.documentElement.classList.add("embed");
+}
+</script>
+</body>
+</html>

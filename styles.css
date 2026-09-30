@@ -225,12 +225,6 @@ a {
   color: var(--accent);
 }
 
-.nav-dropdown-contact .nav-dropdown-menu {
-  left: auto;
-  right: 0;
-  min-width: 20rem;
-}
-
 .btn-nav,
 .btn-pill {
   display: inline-flex;
@@ -796,6 +790,47 @@ body.ide .ide-work-image {
   transition: transform 0.55s ease;
 }
 
+body.ide .ide-work.has-models {
+  align-items: start;
+}
+
+body.ide .ide-work-models {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.9rem;
+}
+
+@media (min-width: 860px) {
+  body.ide .ide-work.has-models .ide-work-models {
+    grid-column: 1 / -1;
+  }
+}
+
+body.ide .ide-work-models figure {
+  margin: 0;
+  background: #05060a;
+  border: 1px solid var(--line);
+}
+
+body.ide .ide-work-models p {
+  margin: 0;
+  padding: 0.55rem 0.7rem 0;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+body.ide .ide-work-models iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  border: 0;
+  background: #05060a;
+}
+
 body.ide .ide-work-image img {
   width: 100%;
   height: 100%;
@@ -886,6 +921,7 @@ body.ide .ide-work-cta {
   gap: 0.45rem;
   margin-top: 1.4rem;
   color: var(--ink);
+  text-decoration: none;
 }
 
 body.ide .ide-work:hover .ide-work-cta {

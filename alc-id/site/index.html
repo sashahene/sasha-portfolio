@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ALC ID Research Library</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="mark">
+        <div class="ring" aria-hidden="true"></div>
+        <div>
+          <p class="eyebrow">ALC ID bracelet</p>
+          <h1 id="page-title">Research library</h1>
+        </div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Sections">
+        <button type="button" id="tab-research" role="tab" aria-selected="true" aria-controls="panel-research">Research</button>
+        <button type="button" id="tab-notes" role="tab" aria-selected="false" aria-controls="panel-notes" tabindex="-1">Notes</button>
+        <button type="button" id="tab-guide" role="tab" aria-selected="false" aria-controls="panel-guide" tabindex="-1">Guide</button>
+        <button type="button" id="tab-chats" role="tab" aria-selected="false" aria-controls="panel-chats" tabindex="-1">Saved chats</button>
+      </div>
+    </header>
+
+    <div id="panel-research" role="tabpanel" aria-labelledby="tab-research">
+      <p class="lede">Here is a list of research behind alcohol bracelet sensing and how they tested it. Most of this was used to create BACtrack Skyn, but we can use this to help our product as well. At the bottom is UC San Diego research where they created just the sensor. I am using that website to help us come up with a way to create our own - more simple than that probably.</p>
+      <ul class="stats">
+        <li><strong id="stat-studies">11</strong> studies</li>
+        <li><strong id="stat-schools">7</strong> lead schools</li>
+        <li>Mostly BACtrack Skyn wrist sensors</li>
+      </ul>
+
+    <div class="controls">
+      <label class="sr-only" for="search">Search studies</label>
+      <input id="search" class="search" type="search" placeholder="Search by title, school, device, or finding" autocomplete="off">
+      <ul class="filters" id="filters"></ul>
+    </div>
+
+    <div class="meta-row">
+      <p id="count">10 studies</p>
+      <button type="button" id="clear">Clear search and filter</button>
+    </div>
+
+    <main class="list" id="list"></main>
+
+    <footer>
+      <p>The folder also has a second copy of the Rosenberg college-student preprint, the file ending in "-1.pdf". It is the same paper, so it appears once here. Summaries are drawn from each paper's abstract and results. The Rosenberg file is a preprint and was not peer reviewed.</p>
+    </footer>
+    </div>
+
+    <div id="panel-notes" role="tabpanel" aria-labelledby="tab-notes" hidden>
+      <p class="lede">Personal notes on what is needed to create a full, working prototype, and information on chemicals, sensors, etc. This is the link to <a href="../BAC%20tracker%20sensor%20_%20IN%20WORKS.pdf">my personal notes</a>, below is an AI summary of what I wrote.</p>
+      <div class="notes">
+        <section class="note-card">
+          <h2>Steps to complete the project</h2>
+          <label class="sr-only" for="note-steps">Steps to complete the project</label>
+          <textarea id="note-steps">These are the pieces I need to finish the sensor.
+
+- Alcohol sensor: measures the ethanol in your sweat
+- Electronic circuit: converts the sensor's electrical response into usable data
+- Microcontroller: processes the measurements
+- Bluetooth module: sends data to the phone
+- Battery: powers the wearable
+- Software: estimates BAC and displays the information
+- Notification system: alerts the user or a trusted contact</textarea>
+        </section>
+        <section class="note-card">
+          <h2>How the sensor detects alcohol</h2>
+          <p class="note-source">From the UC San Diego research</p>
+          <label class="sr-only" for="note-chemistry">How the sensor detects alcohol</label>
+          <textarea id="note-chemistry">Alcohol oxidase is the biological component responsible for detecting alcohol.
+The sensor measures the hydrogen peroxide that gets produced.
+The amount of hydrogen peroxide is related to the amount of ethanol present.
+
+What is happening, and why this reaction matters:
+1. Ethanol in the sweat comes into contact with alcohol oxidase.
+2. Alcohol oxidase helps ethanol react with oxygen.
+3. The reaction produces acetaldehyde and hydrogen peroxide.
+4. The electrode detects the hydrogen peroxide.
+5. The resulting electrical signal helps determine how much ethanol was present.
+
+So alcohol oxidase's job is to help the sensor measure alcohol.</textarea>
+        </section>
+        <section class="note-card">
+          <h2>Chemicals used</h2>
+          <label class="sr-only" for="note-materials">Chemicals used</label>
+          <textarea id="note-materials">1. Pilocarpine
+A chemical that causes sweating in the spot we need it. This is needed because if the person is not already sweating, we still have to get sweat onto the sensor.
+
+2. Alcohol oxidase
+The chemical responsible for detecting alcohol.</textarea>
+        </section>
+        <section class="note-card">
+          <h2>Electrodes</h2>
+          <label class="sr-only" for="note-electrodes">Electrodes</label>
+          <textarea id="note-electrodes">The sensor needs three sensing electrodes.
+
+- Working electrode: detects the electrochemical reaction associated with ethanol
+- Reference electrode: provides a stable reference potential
+- Counter electrode: completes the electrical circuit
+
+In the UC San Diego research, they used:
+- Working electrode: Prussian blue modified conductive carbon (there is an image of this in the original notes)
+- Reference electrode: silver/silver chloride
+- Counter electrode: conductive carbon
+
+The product is a small ceramic strip containing four working electrodes, one reference electrode, and one counter electrode.</textarea>
+        </section>
+        <section class="note-card">
+          <h2>Other research to use</h2>
+          <p class="note-source">Eco-Friendly Conformal and Self-Adhesive Electrochemical Sensors for Sweat Monitoring (2025)</p>
+          <label class="sr-only" for="note-other">Other research to use</label>
+          <textarea id="note-other">They developed flexible electrochemical sensors for sweat monitoring.
+They explain how they attached the alcohol-detecting enzyme to the electrode.
+
+They used:
+- Alcohol oxidase: the enzyme that helps convert alcohol (ethanol) into other chemicals through a chemical reaction
+- Bovine serum albumin: a protein extracted from cow blood that is commonly used to stabilize enzymes and other materials in lab experiments. In this project, it helps stabilize the alcohol oxidase when it is attached to an electrode
+- Glutaraldehyde: a chemical used to bind proteins together. It helps attach and stabilize the alcohol oxidase on the electrode
+- Nafion: a synthetic polymer used to create a thin protective membrane on electrochemical sensors. It helps control which substances reach the electrode. Sweat has many other substances besides ethanol, so it kind of filters what reaches the electrode
+
+The paper also describes electrochemical characterization and testing in artificial human sweat. That is useful because we can learn how to construct the actual sensing surface rather than buying it. Not sure we will have time for that, but it is worth checking out.</textarea>
+        </section>
+      </div>
+      <p class="save-status" id="save-status" aria-live="polite">Click any box to edit. Changes save on this computer.</p>
+    </div>
+
+    <div id="panel-guide" role="tabpanel" aria-labelledby="tab-guide" hidden>
+      <section id="guide-schedule" class="schedule">
+        <h2 class="section-title">Eight-week build</h2>
+        <p class="lede">Two months is a solid amount of time for this, as long as you order parts this week, since shipping is the one thing you can't speed up. Here's how I'd split it up, roughly finishing around late November.</p>
+        <ol class="weeks">
+          <li class="week">
+            <h3>Week 1, now. Order and prep</h3>
+            <p>Place the DigiKey order, then use the waiting time to install the Arduino software and watch a beginner soldering video or two. This is also a good week to push your survey out, since responses take time to come in.</p>
+          </li>
+          <li class="week">
+            <h3>Week 2. Get it talking</h3>
+            <p>Make the XIAO blink its light, then connect the gas sensor on a breadboard and see readings on your laptop. Start the sensor's 24-hour warm-up as soon as it's wired, and practice soldering on one of your spare XIAOs.</p>
+          </li>
+          <li class="week">
+            <h3>Week 3. Bluetooth</h3>
+            <p>Get the readings showing up on your phone with a free app like nRF Connect. Add the status LED while you're at it, since it's quick.</p>
+          </li>
+          <li class="week">
+            <h3>Week 4. Collect real data</h3>
+            <p>This is the heart of the proof of concept. Test the sensor with different amounts of alcohol on a pad near the vents, record the readings in a spreadsheet, and make your graph. Note the room temperature and humidity each time.</p>
+          </li>
+          <li class="week">
+            <h3>Week 5. Measure and design the case</h3>
+            <p>Measure your actual parts with a ruler or calipers, then design the case in Tinkercad or Onshape around those real sizes, with a little breathing room. Print the first version.</p>
+          </li>
+          <li class="week">
+            <h3>Week 6. Fix the fit and assemble</h3>
+            <p>Your first print probably won't fit perfectly, so adjust and reprint. Then solder everything permanently and put it all together, including the skin seal and strap.</p>
+          </li>
+          <li class="week">
+            <h3>Week 7. Test the finished bracelet</h3>
+            <p>Wear it, test it with the alcohol pad against the vents, and fix whatever breaks (something always does). Take photos and screen recordings for your presentation.</p>
+          </li>
+          <li class="week">
+            <h3>Week 8. Presentation, plus buffer</h3>
+            <p>Build your slides: survey results, your data graph, both 3D models side by side, and your honest limitations. Any leftover time here is your safety net for delays.</p>
+          </li>
+        </ol>
+        <div class="schedule-tips">
+          <h3>A couple of tips</h3>
+          <p>If you're working with a team, the case design (week 5) can start earlier in parallel using the sizes from the product pages, then get adjusted once the parts arrive. And if anything falls behind, protect week 4. The data graph is your most important evidence, so a working breadboard with good data beats a pretty case with no data.</p>
+        </div>
+      </section>
+
+      <p class="lede">Ask about building the sensor. The explanation shows here, then the chat is saved on the Saved chats tab.</p>
+
+      <form class="ask" id="ask-form">
+        <label for="ask-input">Ask about building the sensor</label>
+        <textarea id="ask-input" rows="3" placeholder="How can I create my own, simplified version of the UC San Diego sensor?"></textarea>
+        <button type="submit">Ask</button>
+      </form>
+      <div class="answers" id="latest"></div>
+    </div>
+
+    <div id="panel-chats" role="tabpanel" aria-labelledby="tab-chats" hidden>
+      <form class="ask" id="chats-lock">
+        <label for="chats-password">Password for saved chats</label>
+        <input id="chats-password" type="password" autocomplete="current-password">
+        <button type="submit">Open</button>
+        <p class="lock-error" id="chats-lock-error" hidden>Wrong password.</p>
+      </form>
+      <div id="chats-body" hidden>
+      <p class="lede">Saved chats from the Guide tab, plus the plan those answers are written from. Everything stays on this computer.</p>
+
+      <h2 class="section-title">Saved chats</h2>
+      <div class="answers" id="saved-chats"></div>
+
+      <h2 class="section-title">Saved plan</h2>
+      <p class="note-source">You can edit these. The next answer on the Guide tab uses whatever is written here.</p>
+      <div class="notes">
+        <section class="note-card">
+          <h2>A simpler UC San Diego sensor</h2>
+          <label class="sr-only" for="guide-simple">A simpler UC San Diego sensor</label>
+          <textarea id="guide-simple">UC San Diego's device has two big pieces: a temporary-tattoo sensor, and a flexible circuit board that snaps on with a magnet and sends the reading to a phone by Bluetooth. A simpler first version is only the sensor strip. Get one reading working before you build the phone, the battery, and the alerts.
+
+1. Use a small strip with three electrodes. One working electrode is enough to start. UC San Diego used four working electrodes on a ceramic strip. You can use one.
+2. Coat the working electrode with alcohol oxidase. Ethanol in sweat touches the enzyme, reacts with oxygen, and makes acetaldehyde and hydrogen peroxide. The electrode measures the hydrogen peroxide. That electrical signal is how you tell how much ethanol was there.
+3. If you build the coating instead of buying a finished strip, use the 2025 sweat-sensor paper: bovine serum albumin to keep the enzyme stable, glutaraldehyde to attach it, and Nafion as a thin filter so other chemicals in sweat do not reach the electrode.
+4. Put pilocarpine in a small gel on the skin so the person sweats in that spot even if they were not already sweating.
+5. Test the strip in artificial sweat with a known amount of alcohol before anyone wears it.
+
+The BACtrack Skyn papers do not tell you how to mix this sensor. They tell you how a finished wrist monitor gets tested: whether people will wear it, how long the reading lags behind a breath test, and how often data goes missing. Use those later, when you check your own bracelet.</textarea>
+        </section>
+        <section class="note-card">
+          <h2>Chemicals</h2>
+          <label class="sr-only" for="guide-chemicals">Chemicals</label>
+          <textarea id="guide-chemicals">- Pilocarpine: makes the skin sweat where the sensor is, so you still get a sample if the person is not already sweating.
+- Alcohol oxidase: the enzyme that detects ethanol. It helps ethanol react with oxygen and produces hydrogen peroxide, which the electrode measures.
+- Bovine serum albumin: stabilizes the enzyme on the electrode.
+- Glutaraldehyde: sticks the enzyme to the electrode.
+- Nafion: a thin membrane that lets the useful signal through and blocks a lot of the other stuff in sweat.
+
+You may not coat the electrode yourself. The 2025 paper is the recipe if you do. If there is not time, a bought strip with alcohol oxidase already on it is the simpler path. Pilocarpine is still the piece that solves "what if they are not sweating."</textarea>
+        </section>
+        <section class="note-card">
+          <h2>Electrodes</h2>
+          <label class="sr-only" for="guide-electrodes">Electrodes</label>
+          <textarea id="guide-electrodes">- Working electrode: detects the reaction. UC San Diego used Prussian blue on conductive carbon.
+- Reference electrode: a steady baseline. They used silver/silver chloride.
+- Counter electrode: completes the circuit. They used conductive carbon.
+
+Their product was a small ceramic strip with four working electrodes, one reference, and one counter. Start with one working electrode.</textarea>
+        </section>
+        <section class="note-card">
+          <h2>The rest of the bracelet</h2>
+          <label class="sr-only" for="guide-rest">The rest of the bracelet</label>
+          <textarea id="guide-rest">After the strip gives a reading, the rest of the notes are the wearable around it.
+
+- Electronic circuit: turns the sensor's electrical response into data
+- Microcontroller: processes the measurements
+- Bluetooth module: sends data to the phone
+- Battery: powers it
+- Software: estimates BAC and shows it
+- Notification system: alerts you or a trusted contact
+
+UC San Diego already paired their tattoo with a flexible board and Bluetooth. You can copy that idea later. It is not required to prove the sensor works.</textarea>
+        </section>
+      </div>
+      <p class="save-status">Click any plan box to edit. Changes save on this computer.</p>
+      </div>
+    </div>
+  </div>
+  <script src="studies.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
