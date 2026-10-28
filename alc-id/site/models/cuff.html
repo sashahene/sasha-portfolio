@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Clēar Cuff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f3f2ef; --text:#1d1f24; --muted:#6b6f78; --line:rgba(29,31,36,.14);
+  --panel:rgba(255,255,255,.82); --accent:#2f6fd6;
+  --font:"Exo 2","Segoe UI",system-ui,sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+canvas#gl:active{cursor:grabbing}
+header{position:fixed;left:0;right:0;top:env(safe-area-inset-top,0px);padding:1.1rem 1.4rem;pointer-events:none;z-index:3}
+h1{margin:0;font-weight:600;font-size:clamp(1.3rem,3.2vw,2rem);line-height:1.1;letter-spacing:-.01em}
+header p{margin:.35rem 0 0;color:var(--muted);font-size:.95rem;max-width:46ch}
+.controls{position:fixed;left:50%;bottom:calc(.9rem + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:4;
+  display:flex;gap:.4rem;flex-wrap:wrap;justify-content:center;width:max-content;max-width:calc(100% - 2rem)}
+.cbtn{background:var(--panel);border:1px solid var(--line);color:var(--text);font:600 .88rem var(--font);
+  padding:.5rem .9rem;border-radius:9px;cursor:pointer;backdrop-filter:blur(8px)}
+.cbtn[aria-pressed="true"]{background:var(--text);color:#fff;border-color:var(--text)}
+.cbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.panel{position:fixed;right:1.2rem;top:1.2rem;width:min(320px,calc(100% - 2.4rem));max-height:calc(100% - 6.5rem);overflow:auto;z-index:4;
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:.9rem 1rem;backdrop-filter:blur(10px);font-size:.88rem;line-height:1.45}
+.panel h2{margin:.2rem 0 .45rem;font-size:.78rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.panel h2:not(:first-child){margin-top:1rem}
+.panel dl{display:grid;grid-template-columns:1fr auto;gap:.15rem .8rem;margin:0}
+.panel dt{color:var(--muted)} .panel dd{margin:0;font-variant-numeric:tabular-nums;text-align:right}
+.parts{list-style:none;margin:0;padding:0}
+.parts button{all:unset;display:flex;align-items:center;gap:.55rem;width:100%;padding:.22rem .2rem;border-radius:6px;cursor:pointer}
+.parts button:hover,.parts button[aria-pressed="true"]{background:rgba(29,31,36,.07)}
+.parts button:focus-visible{outline:2px solid var(--accent)}
+.parts i{width:11px;height:11px;border-radius:3px;flex:none;border:1px solid rgba(0,0,0,.15)}
+.parts small{margin-left:auto;color:var(--muted);font-variant-numeric:tabular-nums}
+.panel ul.open{margin:0;padding-left:1.1rem;color:var(--muted)}
+.panel ul.open li{margin:.15rem 0}
+.toggle-panel{display:none}
+#labels{position:fixed;inset:0;pointer-events:none;z-index:2}
+.lbl{position:absolute;left:0;top:0;font:600 .76rem var(--font);color:var(--text);background:rgba(255,255,255,.85);
+  border:1px solid var(--line);border-radius:6px;padding:.12rem .4rem;white-space:nowrap;transform:translate(-50%,-140%);transition:opacity .25s}
+@media (max-width:720px){
+  .panel{top:auto;bottom:calc(4.6rem + env(safe-area-inset-bottom,0px));right:1rem;left:1rem;width:auto;max-height:42%}
+  .panel.collapsed{display:none}
+  .toggle-panel{display:inline-block}
+  header p{display:none}
+}
+html.embed header{display:none}
+html.embed .controls{bottom:.45rem;gap:.3rem}
+html.embed .cbtn{font-size:.72rem;padding:.32rem .55rem}
+html.embed .lbl{font-size:.62rem}
+</style>
+<script>
+if (/(?:^|[?&])embed=1(?:&|$)/.test(location.search)) document.documentElement.classList.add("embed");
+</script>
+</head>
+<body>
+<canvas id="gl" aria-label="Interactive 3D model of the silver cuff bracelet"></canvas>
+<div id="labels"></div>
+<header>
+  <h1>Clēar cuff</h1>
+  <p>Polished sterling cuff that watches heart rate and movement, buzzes the wrist and alerts your iPhone if both look wrong. Drag to orbit, scroll or pinch to zoom.</p>
+</header>
+
+<aside class="panel" id="panel">
+  <h2>Exterior</h2>
+  <dl id="dims-ext"></dl>
+  <h2>Cavity</h2>
+  <dl id="dims-cav"></dl>
+  <h2>Parts</h2>
+  <ul class="parts" id="parts"></ul>
+  <h2>Still open</h2>
+  <ul class="open">
+    <li>Placeholder sizes only. Real battery, board, sensor and motor dimensions are not in yet.</li>
+    <li>The infrared sensor needs steady skin contact. An open cuff can lift off the wrist, so the fit (or a spring in the band) needs testing.</li>
+    <li>How strongly the buzz carries through the silver has not been tested.</li>
+    <li>Bluetooth range to the iPhone through the nonmetal window has not been tested.</li>
+    <li>The screen or light system is still a maybe. The model shows a small side light you can remove.</li>
+    <li>How the inner cover fastens and how it charges (pogo pins or wireless) are not decided.</li>
+  </ul>
+</aside>
+
+<div class="controls" role="toolbar" aria-label="View controls">
+  <button class="cbtn" id="b-polish" aria-pressed="true">Polished</button>
+  <button class="cbtn" id="b-xray" aria-pressed="false">X-ray</button>
+  <button class="cbtn" id="b-open" aria-pressed="false">Open cover</button>
+  <button class="cbtn toggle-panel" id="b-panel" aria-pressed="false">Specs</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<!-- cuff-model:start -->
+<script>
+// Silver cuff enclosure model, shared by cuff.html and the diamond-drop film.
+// buildCuff(THREE) returns the untransformed model (units: mm, wrist axis = +Z) plus its geometry helpers.
+window.buildCuff = function(THREE){
+// ---------- Design parameters (mm). Change these to iterate. ----------
+const P = {
+  innerA: 30,        // interior oval half-width  (60 mm)
+  innerB: 25,        // interior oval half-height (50 mm)
+  width: 15,         // band width along the wrist
+  thick: 6,          // radial thickness
+  wall: 1.2,         // shell wall
+  gapTarget: 27,     // opening between the ends
+  endRound: 4.5,     // how far the rounded end cap reaches
+  coverT: 1.0        // removable inner cover thickness
+};
+
+// ---------- Ellipse frame helpers ----------
+const A = P.innerA, B = P.innerB;
+const Z = new THREE.Vector3(0,0,1);
+function frame(th){
+  const p = new THREE.Vector3(A*Math.cos(th), B*Math.sin(th), 0);
+  const t = new THREE.Vector3(-A*Math.sin(th), B*Math.cos(th), 0).normalize();
+  const n = new THREE.Vector3(B*Math.cos(th), A*Math.sin(th), 0).normalize();
+  return {p,t,n};
+}
+// arc-length table along the inner oval, s = 0 at the top (th = 90°)
+const TAB = [];
+(function(){
+  const N = 4000; let s = 0, prev = frame(-Math.PI/2).p;
+  for (let i=0;i<=N;i++){
+    const th = -Math.PI/2 + 2*Math.PI*i/N, p = frame(th).p;
+    s += p.distanceTo(prev); prev = p; TAB.push([th,s]);
+  }
+  const s0 = TAB[N/2][1]; TAB.forEach(r => r[1] -= s0);
+})();
+function thAt(s){
+  let lo=0, hi=TAB.length-1;
+  while (hi-lo>1){ const m=(lo+hi)>>1; (TAB[m][1]<s)?lo=m:hi=m; }
+  const [t0,s0]=TAB[lo],[t1,s1]=TAB[hi];
+  return t0 + (t1-t0)*(s-s0)/((s1-s0)||1);
+}
+function sAt(th){ return TAB[Math.round((th+Math.PI/2)/(2*Math.PI)*(TAB.length-1))][1]; }
+
+// Superellipse cross-section. u = outward from inner oval, v = along the wrist.
+// Different exponents let the outside dome gently while the skin side stays flatter.
+function section(uc, hu, hv, nOut, nIn, M){
+  const pts=[];
+  for (let j=0;j<M;j++){
+    const f = 2*Math.PI*j/M, c=Math.cos(f), s=Math.sin(f);
+    const n = c>=0 ? nOut : nIn;
+    pts.push([uc + hu*Math.sign(c)*Math.pow(Math.abs(c),2/n), hv*Math.sign(s)*Math.pow(Math.abs(s),2/n)]);
+  }
+  return pts;
+}
+
+// Sweep a section along the oval between two arc-length positions, with domed ends.
+function sweep(prof, sA, sB, opts={}){
+  const seg = opts.seg || Math.max(8, Math.ceil(Math.abs(sB-sA)*1.5));
+  const cap = opts.cap ?? 0.6, K = opts.capSeg || 10;
+  const uc = prof.reduce((a,p)=>a+p[0],0)/prof.length;
+  const M = prof.length, pos=[], idx=[];
+  const ring = (fr, adv, dir, scale) => {
+    for (const [u,v] of prof){
+      const q = fr.p.clone().addScaledVector(fr.t, adv*dir)
+        .addScaledVector(fr.n, uc+(u-uc)*scale).addScaledVector(Z, v*scale);
+      pos.push(q.x,q.y,q.z);
+    }
+  };
+  const tip = (fr, adv, dir) => {
+    const q = fr.p.clone().addScaledVector(fr.t, adv*dir).addScaledVector(fr.n, uc);
+    pos.push(q.x,q.y,q.z);
+  };
+  const fA = frame(thAt(sA)), fB = frame(thAt(sB));
+  // start tip + cap rings
+  tip(fA, cap, -1);
+  for (let k=K-1;k>=1;k--){ const a=k/K*Math.PI/2; ring(fA, cap*Math.sin(a), -1, Math.cos(a)); }
+  for (let i=0;i<=seg;i++) ring(frame(thAt(sA+(sB-sA)*i/seg)), 0, 1, 1);
+  for (let k=1;k<K;k++){ const a=k/K*Math.PI/2; ring(fB, cap*Math.sin(a), 1, Math.cos(a)); }
+  tip(fB, cap, 1);
+  const rings = (K-1)*2 + seg + 1, last = 1 + rings*M;
+  const R = r => 1 + r*M;
+  for (let j=0;j<M;j++){ const j1=(j+1)%M; idx.push(R(0)+j, R(0)+j1, 0); }
+  for (let r=0;r<rings-1;r++) for (let j=0;j<M;j++){
+    const j1=(j+1)%M, a=R(r)+j, b=R(r+1)+j, c=R(r)+j1, d=R(r+1)+j1;
+    idx.push(a,b,c, b,d,c);
+  }
+  for (let j=0;j<M;j++){ const j1=(j+1)%M; idx.push(R(rings-1)+j, last, R(rings-1)+j1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+function volume(g){
+  const p=g.attributes.position.array, ix=g.index.array; let v=0;
+  for (let i=0;i<ix.length;i+=3){
+    const a=ix[i]*3,b=ix[i+1]*3,c=ix[i+2]*3;
+    v += p[a]*(p[b+1]*p[c+2]-p[b+2]*p[c+1]) - p[a+1]*(p[b]*p[c+2]-p[b+2]*p[c]) + p[a+2]*(p[b]*p[c+1]-p[b+1]*p[c]);
+  }
+  return v/6;
+}
+
+// ---------- Geometry ----------
+// Pick the end angle so the measured gap between the rounded tips matches gapTarget.
+const shellProf = section(P.thick/2, P.thick/2, P.width/2, 2.6, 6, 72);
+let delta = 0.5;
+function gapFor(d){
+  const s = sAt(-Math.PI/2+d), f1=frame(thAt(s)), f2=frame(thAt(-s));
+  const t1 = f1.p.clone().addScaledVector(f1.t,-P.endRound).addScaledVector(f1.n,P.thick/2);
+  const t2 = f2.p.clone().addScaledVector(f2.t, P.endRound).addScaledVector(f2.n,P.thick/2);
+  return t1.distanceTo(t2);
+}
+for (let lo=0.05, hi=1.4, i=0;i<40;i++){ delta=(lo+hi)/2; (gapFor(delta)<P.gapTarget)?lo=delta:hi=delta; }
+const sEnd = -sAt(-Math.PI/2+delta);      // ends sit at s = ±sEnd (top is s = 0)
+
+const W = P.wall, cavHu = P.thick/2-W, cavHv = P.width/2-W;
+const cavProf  = section(P.thick/2, cavHu, cavHv, 2.6, 6, 48);
+const sCav = sEnd - 5;                    // solid end walls ~5 mm before each tip
+
+const group = new THREE.Group();
+
+const silver = new THREE.MeshPhysicalMaterial({color:new THREE.Color(0.97,0.96,0.94), metalness:1, roughness:0.07,
+  clearcoat:0.4, clearcoatRoughness:0.05, envMapIntensity:1.15});
+const satin  = new THREE.MeshPhysicalMaterial({color:new THREE.Color(0.93,0.92,0.9), metalness:1, roughness:0.32, envMapIntensity:1});
+const plain = (hex, o={}) => new THREE.MeshStandardMaterial(Object.assign({color:hex, roughness:.55, metalness:0}, o));
+
+const parts = [];
+function add(name, geo, mat, opts={}){
+  const m = new THREE.Mesh(geo, mat); m.name = name; group.add(m);
+  const rec = Object.assign({name, mesh:m, mat, internal:false}, opts); parts.push(rec); return rec;
+}
+
+const shell = add('Outer shell', sweep(shellProf, -sEnd, sEnd, {cap:P.endRound, capSeg:18, seg:420}), silver, {chip:'#d9d9d6', note:'sterling'});
+const cavity = add('Internal cavity', sweep(cavProf, -sCav, sCav, {cap:1.2, seg:300}),
+  new THREE.MeshStandardMaterial({color:0x6fd2ff, transparent:true, opacity:.16, depthWrite:false, side:THREE.DoubleSide}),
+  {internal:true, chip:'#6fd2ff'});
+
+// Inner cover: thin curved panel on the skin side; its seam only exists on the inside.
+const coverProf = section(0.5, P.coverT/2+0.03, cavHv+0.3, 8, 8, 40);
+const cover = add('Inner cover (removable)', sweep(coverProf, -(sCav-1), sCav-11, {cap:0.5, seg:260}), satin, {chip:'#bdbcb8'});
+
+// Electronics placeholders (simple volumes, NOT real component sizes)
+const box = (u0,u1,hv,sA,sB,cap=0.6) => sweep(section((u0+u1)/2,(u1-u0)/2,hv,8,8,32), sA, sB, {cap});
+const uIn = W+0.15, uOut = P.thick-W-0.15;
+// pulsē layout (s = mm along the band from the top of the wrist). The optical sensor sits on top of the wrist,
+// where a cuff presses most firmly against the skin.
+add('Flex PCB', box(uIn, uIn+0.15, cavHv-0.6, -(sCav-1.5), sCav-1.5, 0.3), plain(0xd99a2b,{roughness:.4}), {internal:true, chip:'#d99a2b', anchor:-30});
+add('Infrared heart-rate sensor', box(uIn+0.35, uIn+1.6, 4.2, -6.5, 6.5), plain(0x8d5bc2), {internal:true, chip:'#8d5bc2', anchor:0});
+add('Accelerometer', box(uIn+0.35, uIn+1.1, 1.8, 8, 11.5, 0.3), plain(0x2b9bb5), {internal:true, chip:'#2b9bb5', anchor:9.75});
+add('Microcontroller + Bluetooth', box(uIn+0.35, uIn+1.6, cavHv-1.3, 14, 29), plain(0x2f8a5b), {internal:true, chip:'#2f8a5b', anchor:21});
+add('Vibration motor (buzz alert)', box(uIn+0.35, uOut-0.2, 4, 33, 42), plain(0x6b6f78,{metalness:.6, roughness:.35}), {internal:true, chip:'#6b6f78', anchor:37.5});
+add('Battery (curved LiPo)', box(uIn+0.35, uOut-0.1, cavHv-0.9, -50, -13), plain(0x5b6b8a), {internal:true, chip:'#5b6b8a', anchor:-31});
+add('Bluetooth antenna', box(uIn+0.35, uIn+0.9, cavHv-1.5, sCav-9, sCav-1.5, 0.4), plain(0xe14b5a), {internal:true, chip:'#e14b5a', anchor:sCav-5});
+// Visible-from-inside features
+// Optical window: dark glass the infrared light shines through, with two emitters and a photodiode behind it
+const opticalWin = add('Optical window', sweep(section(-0.05,0.12,3.6,8,8,32), -5, 5, {cap:0.8}),
+  new THREE.MeshPhysicalMaterial({color:0x0c0d12, metalness:0, roughness:.05, clearcoat:1, clearcoatRoughness:.03}), {chip:'#1a1b22', anchor:0, onCover:true});
+(function optics(){
+  const led = plain(0x5a0d18, {emissive:0x3a0610, roughness:.3}), pd = plain(0x1d2433, {roughness:.25});
+  for (const [sv, mat, r] of [[-2.6, led, 0.8], [0, pd, 1.1], [2.6, led, 0.8]]){
+    const fr = frame(thAt(sv)), c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.12, 32), mat);
+    c.position.copy(fr.p).addScaledVector(fr.n, -0.1);
+    c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), fr.n);
+    opticalWin.mesh.add(c);
+  }
+})();
+add('Antenna window (nonmetal)', sweep(section(0.5,P.coverT/2+0.03,cavHv+0.3,8,8,40), sCav-10, sCav-0.5, {cap:0.5}),
+  plain(0xfafafa,{roughness:.25}), {chip:'#fafafa', anchor:sCav-5, onCover:true});
+(function contacts(){
+  const g = new THREE.Group(), mat = plain(0xd4af37,{metalness:1, roughness:.25});
+  const fr = frame(thAt(-(sCav-6)));
+  for (const v of [-3,3]){
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,0.4,32), mat);
+    c.position.copy(fr.p).addScaledVector(fr.n,-0.1).addScaledVector(Z,v);
+    c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), fr.n);
+    g.add(c);
+  }
+  g.name='Charging contacts'; group.add(g);
+  parts.push({name:'Charging contacts', mesh:g, mat, chip:'#d4af37', anchor:-(sCav-6), onCover:true});
+})();
+// Optional status light ("screen or light system - potential"): a thin frosted light pipe on the side edge,
+// so the outer face stays unbroken. Marked optional so it can be switched off.
+add('Status light (optional)', sweep(section(P.thick/2, 0.55, 0.14, 8, 8, 24).map(([u,v]) => [u, v + P.width/2 - 0.06]), -16, -6, {cap:0.3}),
+  plain(0xe8f4ff, {emissive:0x6fb8ff, emissiveIntensity:.6, roughness:.4}), {chip:'#9fd0ff', anchor:-11, optional:true});
+
+return {P, A, B, Z, frame, thAt, sAt, section, sweep, volume, gapFor, delta, sEnd, sCav, W, cavHu, cavHv,
+  shellProf, cavProf, group, parts, shell, cavity, cover, silver, satin};
+};
+</script>
+<!-- cuff-model:end -->
+<script>
+(function(){
+const M = buildCuff(THREE);
+const {P, A, Z, frame, thAt, volume, gapFor, delta, sCav, cavHu, cavHv, shellProf, cavProf, group, parts, shell, cavity, silver, satin} = M;
+
+// ---------- Renderer / scene ----------
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.95;
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0xf3f2ef);
+const camera = new THREE.PerspectiveCamera(32, 1, 1, 2000);
+camera.position.set(95, 55, 125);
+const controls = new THREE.OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.minDistance = 70; controls.maxDistance = 400;
+controls.autoRotate = true; controls.autoRotateSpeed = 0.6;
+controls.addEventListener('start', () => controls.autoRotate = false);
+
+// White studio environment for reflections (softboxes and a few gray cards, no outdoor HDRI)
+(function makeStudio(){
+  const env = new THREE.Scene();
+  const room = new THREE.Mesh(new THREE.BoxGeometry(100,100,100),
+    new THREE.MeshBasicMaterial({color:new THREE.Color(0.62,0.62,0.61), side:THREE.BackSide}));
+  env.add(room);
+  function panel(w,h,lum,pos,look){
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+      new THREE.MeshBasicMaterial({color:new THREE.Color(lum,lum,lum), side:THREE.DoubleSide}));
+    m.position.set(...pos); m.lookAt(...look); env.add(m);
+  }
+  panel(40,40,5,[0,48,0],[0,0,0]);       // overhead softbox
+  panel(16,60,4,[-46,8,10],[0,0,0]);      // left strip
+  panel(16,60,4,[46,8,-10],[0,0,0]);      // right strip
+  panel(40,20,2.2,[0,6,48],[0,0,0]);      // front fill
+  panel(12,70,0.03,[30,0,40],[0,0,0]);    // dark cards give the silver edge definition
+  panel(12,70,0.03,[-34,0,-36],[0,0,0]);
+  panel(12,70,0.05,[-40,0,28],[0,0,0]);
+  panel(60,8,0.04,[0,20,-46],[0,0,0]);
+  panel(100,30,0.45,[0,-40,0],[0,0,0]);   // floor bounce
+  const pm = new THREE.PMREMGenerator(renderer);
+  scene.environment = pm.fromScene(env, 0.02).texture;
+})();
+
+const B = M.B;
+group.rotation.z = THREE.MathUtils.degToRad(28);  // tilt so the opening faces the camera
+scene.add(group);
+
+// Soft contact shadow under the cuff
+(function shadow(){
+  group.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(shell.mesh);
+  const c = document.createElement('canvas'); c.width=c.height=256;
+  const x = c.getContext('2d'), gr = x.createRadialGradient(128,128,10,128,128,128);
+  gr.addColorStop(0,'rgba(0,0,0,.28)'); gr.addColorStop(1,'rgba(0,0,0,0)');
+  x.fillStyle=gr; x.fillRect(0,0,256,256);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(110,60), new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c), transparent:true, depthWrite:false}));
+  m.rotation.x = -Math.PI/2; m.position.y = bb.min.y-0.2; scene.add(m);
+  controls.target.set(0, (bb.min.y+bb.max.y)/2, 0);
+})();
+
+// ---------- Measurements (computed from the actual geometry) ----------
+(function measure(){
+  group.updateMatrixWorld(true);
+  shell.mesh.geometry.computeBoundingBox();
+  const bb = shell.mesh.geometry.boundingBox, sz = new THREE.Vector3(); bb.getSize(sz);
+  // minimum wall: closest distance between cavity and shell section outlines
+  let minWall = Infinity;
+  for (const [u,v] of cavProf) for (const [U,V] of shellProf) minWall = Math.min(minWall, Math.hypot(u-U,v-V));
+  const vShell = volume(shell.mesh.geometry), vCav = volume(cavity.mesh.geometry);
+  const metal = (vShell - vCav)/1000;     // cm³ (cover counted as part of the shell)
+  const row = (k,v) => `<dt>${k}</dt><dd>${v}</dd>`;
+  document.getElementById('dims-ext').innerHTML =
+    row('Outer size', `${sz.x.toFixed(1)} × ${sz.y.toFixed(1)} mm`) +
+    row('Interior oval', `${2*A} × ${2*B} mm`) +
+    row('Band width', `${sz.z.toFixed(1)} mm`) +
+    row('Radial thickness', `${P.thick} mm`) +
+    row('Opening', `${gapFor(delta).toFixed(1)} mm`) +
+    row('Silver, est.', `${metal.toFixed(1)} cm³ ≈ ${(metal*10.36).toFixed(0)} g`);
+  document.getElementById('dims-cav').innerHTML =
+    row('Section', `${(2*cavHv).toFixed(1)} × ${(2*cavHu).toFixed(1)} mm`) +
+    row('Usable length', `${(2*sCav).toFixed(0)} mm`) +
+    row('Volume', `${(vCav/1000).toFixed(2)} cm³`) +
+    row('Min wall', `${minWall.toFixed(2)} mm`) +
+    row('Inner cover', `${P.coverT} mm`);
+})();
+
+// ---------- Parts list, labels, highlight ----------
+const list = document.getElementById('parts'), labelsEl = document.getElementById('labels');
+let selected = null;
+parts.forEach(p => {
+  const li = document.createElement('li'), b = document.createElement('button');
+  b.innerHTML = `<i style="background:${p.chip}"></i>${p.name}`;
+  b.setAttribute('aria-pressed','false');
+  b.onclick = () => select(selected===p ? null : p);
+  p.btn = b; li.appendChild(b); list.appendChild(li);
+  if (p.anchor !== undefined){
+    const fr = frame(thAt(p.anchor));
+    p.anchorPt = fr.p.clone().addScaledVector(fr.n, -1.5);
+    const l = document.createElement('div'); l.className='lbl'; l.textContent=p.name; l.style.opacity=0;
+    labelsEl.appendChild(l); p.lbl = l;
+  }
+});
+function select(p){
+  selected = p;
+  parts.forEach(q => {
+    q.btn.setAttribute('aria-pressed', q===p);
+    const m = q.mat; if (m.emissive) m.emissive.setHex(q===p ? 0x2f6fd6 : 0x000000);
+    if (m.emissiveIntensity !== undefined) m.emissiveIntensity = q===p ? .55 : 1;
+  });
+  if (p && p.internal && !state.xray) setXray(true);
+}
+
+// ---------- View modes ----------
+const state = {xray:false, open:false, openT:0};
+const bPolish = document.getElementById('b-polish'), bX = document.getElementById('b-xray'), bOpen = document.getElementById('b-open');
+function setXray(on){
+  state.xray = on;
+  silver.transparent = on; silver.opacity = on ? .14 : 1; silver.depthWrite = !on; silver.needsUpdate = true;
+  satin.transparent = on;  satin.opacity  = on ? .35 : 1; satin.depthWrite = !on; satin.needsUpdate = true;
+  parts.forEach(p => { if (p.internal) p.mesh.visible = on || state.open; });
+  bX.setAttribute('aria-pressed', on); bPolish.setAttribute('aria-pressed', !on && !state.open);
+}
+function setOpen(on){
+  state.open = on; bOpen.setAttribute('aria-pressed', on);
+  parts.forEach(p => { if (p.internal) p.mesh.visible = on || state.xray; });
+  bPolish.setAttribute('aria-pressed', !on && !state.xray);
+}
+bX.onclick = () => setXray(!state.xray);
+bOpen.onclick = () => setOpen(!state.open);
+bPolish.onclick = () => { setXray(false); setOpen(false); select(null); };
+document.getElementById('b-panel').onclick = e => {
+  const pn = document.getElementById('panel'), c = pn.classList.toggle('collapsed');
+  e.currentTarget.setAttribute('aria-pressed', !c);
+};
+if (matchMedia('(max-width:720px)').matches) document.getElementById('panel').classList.add('collapsed');
+setXray(false);
+
+// ---------- Loop ----------
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w,h,false); camera.aspect = w/h;
+  camera.position.setLength(w < 720 ? 240 : 200);
+  // keep the cuff centred in the space left of the specs panel on wide screens
+  if (w >= 720) camera.setViewOffset(w, h, Math.min(340, w*.3)/2, 0, w, h); else camera.clearViewOffset();
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize); resize();
+const tmp = new THREE.Vector3();
+const movers = parts.filter(p => p === M.cover || p.onCover);   // these drop inward with the open cover
+(function tick(){
+  requestAnimationFrame(tick);
+  controls.update();
+  state.openT += ((state.open?1:0) - state.openT) * 0.08;
+  const s = 1 - 0.3*state.openT;          // cover drops inward toward the wrist
+  movers.forEach(p => p.mesh.scale.set(s, s, 1));
+  const showLbl = state.xray || state.open;
+  parts.forEach(p => {
+    if (!p.lbl) return;
+    tmp.copy(p.anchorPt);
+    if (p === M.cover || p.onCover) tmp.multiplyScalar(s);
+    tmp.applyMatrix4(group.matrixWorld).project(camera);
+    p.lbl.style.opacity = (showLbl || p===selected) && tmp.z<1 ? 1 : 0;
+    p.lbl.style.left = ((tmp.x+1)/2*innerWidth)+'px';
+    p.lbl.style.top  = ((1-tmp.y)/2*innerHeight)+'px';
+  });
+  renderer.render(scene, camera);
+})();
+})();
+</script>
+</body>
+</html>

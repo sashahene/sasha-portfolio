@@ -179,9 +179,11 @@ a {
 .nav-dropdown-menu {
   position: absolute;
   top: 100%;
-  left: 0;
+  right: 0;
+  left: auto;
   z-index: 120;
   min-width: 17.5rem;
+  max-width: calc(100vw - 1.5rem);
   margin: 0;
   padding: 0.45rem 0;
   list-style: none;
@@ -751,6 +753,42 @@ body.ide .page h1 {
   line-height: 1;
 }
 
+body.ide .page-tabs {
+  display: flex;
+  gap: 0.4rem;
+  margin: -2.2rem 0 3rem;
+}
+
+body.ide .page-tabs [role="tab"] {
+  appearance: none;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 100vw;
+  padding: 0.5rem 1.1rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+body.ide .page-tabs [role="tab"]:hover {
+  color: var(--ink);
+}
+
+body.ide .page-tabs [role="tab"][aria-selected="true"] {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--bg);
+}
+
+body.ide .page-tabs [role="tab"]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 body.ide .project-list {
   display: flex;
   flex-direction: column;
@@ -806,6 +844,10 @@ body.ide .ide-work-models {
   }
 }
 
+body.ide .ide-work-models figure:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
 body.ide .ide-work-models figure {
   margin: 0;
   background: #05060a;
@@ -831,12 +873,76 @@ body.ide .ide-work-models iframe {
   background: #05060a;
 }
 
+body.ide .ide-work-video {
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid var(--line);
+  background: #05060a;
+  padding: 1rem;
+}
+
+@media (min-width: 860px) {
+  body.ide .ide-work.has-models .ide-work-video {
+    grid-column: 1 / -1;
+  }
+}
+
+body.ide .ide-work-video-label {
+  margin: 0 0 0.4rem;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+body.ide .ide-work-video h4 {
+  margin: 0 0 0.4rem;
+  font-size: 1.4rem;
+}
+
+body.ide .ide-work-video-copy p:last-child {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--muted);
+}
+
+body.ide .ide-work-video video {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: #000;
+}
+
+body.ide .ide-work-pitch iframe {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  height: auto;
+  border: 0;
+  background: #fff;
+}
+
+body.ide .ide-work-pitch a {
+  color: inherit;
+}
+
 body.ide .ide-work-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   opacity: 0.86;
   transition: opacity 0.55s ease;
+}
+
+body.ide .ide-work-image.is-poster {
+  aspect-ratio: 750 / 996;
+  background: #0d0e12;
+}
+
+body.ide .ide-work-image.is-poster img {
+  object-fit: contain;
+  opacity: 1;
 }
 
 body.ide .ide-work:hover .ide-work-image {
@@ -913,6 +1019,116 @@ body.ide .ide-work-copy p {
   color: var(--muted);
   font-size: 0.92rem;
   line-height: 1.55;
+  white-space: pre-line;
+}
+
+body.ide .ide-work-copy p a {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+body.light-tower .ide-work-image {
+  aspect-ratio: 3 / 4;
+  background: #111;
+}
+
+body.light-tower .ide-work-image img {
+  object-fit: contain;
+  opacity: 1;
+}
+
+body.ide .ide-work:not(:has(.ide-work-image)) .ide-work-copy p {
+  max-width: 42rem;
+}
+
+body.ide .ide-work:not(:has(.ide-work-image)) {
+  grid-template-columns: minmax(0, 42rem);
+}
+
+@media (min-width: 860px) {
+  body.ide .ide-work:has(.philo-maker) {
+    grid-template-columns: minmax(0, 1.05fr) minmax(16rem, 0.9fr);
+    align-items: start;
+  }
+}
+
+body.ide .philo-maker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1rem;
+  background: #16181f;
+  border: 1px solid var(--line);
+}
+
+body.ide .philo-maker-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+body.ide .philo-maker-label,
+body.ide .philo-maker button,
+body.ide .philo-maker-again {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+body.ide .philo-maker-label {
+  margin: 0;
+  color: var(--muted);
+}
+
+body.ide .philo-maker input {
+  width: 100%;
+  padding: 0.45rem 0;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+}
+
+body.ide .philo-maker input:focus {
+  outline: none;
+  border-bottom-color: var(--accent);
+}
+
+body.ide .philo-maker button,
+body.ide .philo-maker-again {
+  align-self: flex-start;
+  margin-top: 0.2rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+body.ide .philo-maker button:hover,
+body.ide .philo-maker-again:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+body.ide .philo-maker-stage,
+body.ide .philo-poster {
+  margin: 0;
+  background: #0d0e12;
+}
+
+body.ide .philo-maker svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+body.ide .philo-maker.is-placed .philo-maker-form,
+body.ide .philo-maker.is-placed .philo-maker-use {
+  display: none;
 }
 
 body.ide .ide-work-cta {

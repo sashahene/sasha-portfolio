@@ -23,7 +23,7 @@ try {
   });
 } catch (error) {
   showGalaxyError(error);
-  throw error;
+  throw error;``
 }
 
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -51,10 +51,11 @@ const fallbackProjects = [
     tags: ["Propulsion", "CAD", "Simulation"],
     kind: "lava",
     color: "#e9783d",
-    url: "#",
+    url: "docs/bottle-rocket-project.pdf",
+    cta: "View presentation",
   },
   {
-    title: "Satellite Design",
+    title: "Boomoscope - Freshman Projects",
     year: "2025",
     description:
       "A conceptual CubeSat mission and spacecraft subsystem design.",
@@ -65,7 +66,7 @@ const fallbackProjects = [
     clouds: true,
   },
   {
-    title: "Aircraft Structures",
+    title: "Aerodynamics - ",
     year: "2025",
     description:
       "Structural analysis and optimization of an aircraft component.",
@@ -385,7 +386,9 @@ function showProject(project) {
   if (project.url && project.url !== "#") {
     const link = document.createElement("a");
     link.href = project.url;
-    link.textContent = "View project";
+    link.target = "_blank";
+    link.rel = "noreferrer";
+    link.textContent = project.cta || "View project";
     links.append(link);
   }
 

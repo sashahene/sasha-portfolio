@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Cuff Diamond Drop</title>
+<style>
+:root{ --bg:#000; --text:#e9e9ee; --muted:#7a7a85; }
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;overflow:hidden}
+canvas#gl{position:fixed;inset:0;width:100%;height:100%;display:block}
+.loader{position:fixed;inset:0;display:grid;place-items:center;z-index:5;transition:opacity .8s}
+.loader.done{opacity:0;pointer-events:none}
+.loader div{width:min(220px,60vw);text-align:center;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.loader .bar{height:1px;background:#222;margin-top:.9rem;overflow:hidden}
+.loader .bar i{display:block;height:100%;width:0;background:#cfcfd6;transition:width .2s}
+.ctrl{position:fixed;right:1rem;bottom:calc(1rem + env(safe-area-inset-bottom,0px));z-index:4;display:flex;gap:.4rem;opacity:0;transition:opacity .4s}
+body.awake .ctrl{opacity:1}
+.ctrl button{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);color:var(--text);border-radius:999px;
+  width:2.4rem;height:2.4rem;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(6px)}
+.ctrl button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+.ctrl svg{width:14px;height:14px;fill:currentColor}
+</style>
+</head>
+<body>
+<canvas id="gl" aria-label="Animation: the silver cuff falls in slow motion into a pile of diamonds"></canvas>
+<div class="loader" id="loader"><div>Preparing the scene<div class="bar"><i id="bar"></i></div></div></div>
+<div class="ctrl">
+  <button id="b-play" aria-label="Pause"><svg viewBox="0 0 16 16" id="i-play"><path d="M4 2h3v12H4zM9 2h3v12H9z"/></svg></button>
+  <button id="b-replay" aria-label="Replay"><svg viewBox="0 0 16 16"><path d="M8 3V0L4 4l4 4V5a4 4 0 1 1-4 4H2a6 6 0 1 0 6-6z"/></svg></button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/MaskPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Reflector.js"></script>
+<!-- cuff-model:start -->
+<script>
+// Silver cuff enclosure model, shared by cuff.html and the diamond-drop film.
+// buildCuff(THREE) returns the untransformed model (units: mm, wrist axis = +Z) plus its geometry helpers.
+window.buildCuff = function(THREE){
+// ---------- Design parameters (mm). Change these to iterate. ----------
+const P = {
+  innerA: 30,        // interior oval half-width  (60 mm)
+  innerB: 25,        // interior oval half-height (50 mm)
+  width: 15,         // band width along the wrist
+  thick: 6,          // radial thickness
+  wall: 1.2,         // shell wall
+  gapTarget: 27,     // opening between the ends
+  endRound: 4.5,     // how far the rounded end cap reaches
+  coverT: 1.0        // removable inner cover thickness
+};
+
+// ---------- Ellipse frame helpers ----------
+const A = P.innerA, B = P.innerB;
+const Z = new THREE.Vector3(0,0,1);
+function frame(th){
+  const p = new THREE.Vector3(A*Math.cos(th), B*Math.sin(th), 0);
+  const t = new THREE.Vector3(-A*Math.sin(th), B*Math.cos(th), 0).normalize();
+  const n = new THREE.Vector3(B*Math.cos(th), A*Math.sin(th), 0).normalize();
+  return {p,t,n};
+}
+// arc-length table along the inner oval, s = 0 at the top (th = 90°)
+const TAB = [];
+(function(){
+  const N = 4000; let s = 0, prev = frame(-Math.PI/2).p;
+  for (let i=0;i<=N;i++){
+    const th = -Math.PI/2 + 2*Math.PI*i/N, p = frame(th).p;
+    s += p.distanceTo(prev); prev = p; TAB.push([th,s]);
+  }
+  const s0 = TAB[N/2][1]; TAB.forEach(r => r[1] -= s0);
+})();
+function thAt(s){
+  let lo=0, hi=TAB.length-1;
+  while (hi-lo>1){ const m=(lo+hi)>>1; (TAB[m][1]<s)?lo=m:hi=m; }
+  const [t0,s0]=TAB[lo],[t1,s1]=TAB[hi];
+  return t0 + (t1-t0)*(s-s0)/((s1-s0)||1);
+}
+function sAt(th){ return TAB[Math.round((th+Math.PI/2)/(2*Math.PI)*(TAB.length-1))][1]; }
+
+// Superellipse cross-section. u = outward from inner oval, v = along the wrist.
+// Different exponents let the outside dome gently while the skin side stays flatter.
+function section(uc, hu, hv, nOut, nIn, M){
+  const pts=[];
+  for (let j=0;j<M;j++){
+    const f = 2*Math.PI*j/M, c=Math.cos(f), s=Math.sin(f);
+    const n = c>=0 ? nOut : nIn;
+    pts.push([uc + hu*Math.sign(c)*Math.pow(Math.abs(c),2/n), hv*Math.sign(s)*Math.pow(Math.abs(s),2/n)]);
+  }
+  return pts;
+}
+
+// Sweep a section along the oval between two arc-length positions, with domed ends.
+function sweep(prof, sA, sB, opts={}){
+  const seg = opts.seg || Math.max(8, Math.ceil(Math.abs(sB-sA)*1.5));
+  const cap = opts.cap ?? 0.6, K = opts.capSeg || 10;
+  const uc = prof.reduce((a,p)=>a+p[0],0)/prof.length;
+  const M = prof.length, pos=[], idx=[];
+  const ring = (fr, adv, dir, scale) => {
+    for (const [u,v] of prof){
+      const q = fr.p.clone().addScaledVector(fr.t, adv*dir)
+        .addScaledVector(fr.n, uc+(u-uc)*scale).addScaledVector(Z, v*scale);
+      pos.push(q.x,q.y,q.z);
+    }
+  };
+  const tip = (fr, adv, dir) => {
+    const q = fr.p.clone().addScaledVector(fr.t, adv*dir).addScaledVector(fr.n, uc);
+    pos.push(q.x,q.y,q.z);
+  };
+  const fA = frame(thAt(sA)), fB = frame(thAt(sB));
+  // start tip + cap rings
+  tip(fA, cap, -1);
+  for (let k=K-1;k>=1;k--){ const a=k/K*Math.PI/2; ring(fA, cap*Math.sin(a), -1, Math.cos(a)); }
+  for (let i=0;i<=seg;i++) ring(frame(thAt(sA+(sB-sA)*i/seg)), 0, 1, 1);
+  for (let k=1;k<K;k++){ const a=k/K*Math.PI/2; ring(fB, cap*Math.sin(a), 1, Math.cos(a)); }
+  tip(fB, cap, 1);
+  const rings = (K-1)*2 + seg + 1, last = 1 + rings*M;
+  const R = r => 1 + r*M;
+  for (let j=0;j<M;j++){ const j1=(j+1)%M; idx.push(R(0)+j, R(0)+j1, 0); }
+  for (let r=0;r<rings-1;r++) for (let j=0;j<M;j++){
+    const j1=(j+1)%M, a=R(r)+j, b=R(r+1)+j, c=R(r)+j1, d=R(r+1)+j1;
+    idx.push(a,b,c, b,d,c);
+  }
+  for (let j=0;j<M;j++){ const j1=(j+1)%M; idx.push(R(rings-1)+j, last, R(rings-1)+j1); }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3));
+  g.setIndex(idx); g.computeVertexNormals();
+  return g;
+}
+function volume(g){
+  const p=g.attributes.position.array, ix=g.index.array; let v=0;
+  for (let i=0;i<ix.length;i+=3){
+    const a=ix[i]*3,b=ix[i+1]*3,c=ix[i+2]*3;
+    v += p[a]*(p[b+1]*p[c+2]-p[b+2]*p[c+1]) - p[a+1]*(p[b]*p[c+2]-p[b+2]*p[c]) + p[a+2]*(p[b]*p[c+1]-p[b+1]*p[c]);
+  }
+  return v/6;
+}
+
+// ---------- Geometry ----------
+// Pick the end angle so the measured gap between the rounded tips matches gapTarget.
+const shellProf = section(P.thick/2, P.thick/2, P.width/2, 2.6, 6, 72);
+let delta = 0.5;
+function gapFor(d){
+  const s = sAt(-Math.PI/2+d), f1=frame(thAt(s)), f2=frame(thAt(-s));
+  const t1 = f1.p.clone().addScaledVector(f1.t,-P.endRound).addScaledVector(f1.n,P.thick/2);
+  const t2 = f2.p.clone().addScaledVector(f2.t, P.endRound).addScaledVector(f2.n,P.thick/2);
+  return t1.distanceTo(t2);
+}
+for (let lo=0.05, hi=1.4, i=0;i<40;i++){ delta=(lo+hi)/2; (gapFor(delta)<P.gapTarget)?lo=delta:hi=delta; }
+const sEnd = -sAt(-Math.PI/2+delta);      // ends sit at s = ±sEnd (top is s = 0)
+
+const W = P.wall, cavHu = P.thick/2-W, cavHv = P.width/2-W;
+const cavProf  = section(P.thick/2, cavHu, cavHv, 2.6, 6, 48);
+const sCav = sEnd - 5;                    // solid end walls ~5 mm before each tip
+
+const group = new THREE.Group();
+
+const silver = new THREE.MeshPhysicalMaterial({color:new THREE.Color(0.97,0.96,0.94), metalness:1, roughness:0.07,
+  clearcoat:0.4, clearcoatRoughness:0.05, envMapIntensity:1.15});
+const satin  = new THREE.MeshPhysicalMaterial({color:new THREE.Color(0.93,0.92,0.9), metalness:1, roughness:0.32, envMapIntensity:1});
+const plain = (hex, o={}) => new THREE.MeshStandardMaterial(Object.assign({color:hex, roughness:.55, metalness:0}, o));
+
+const parts = [];
+function add(name, geo, mat, opts={}){
+  const m = new THREE.Mesh(geo, mat); m.name = name; group.add(m);
+  const rec = Object.assign({name, mesh:m, mat, internal:false}, opts); parts.push(rec); return rec;
+}
+
+const shell = add('Outer shell', sweep(shellProf, -sEnd, sEnd, {cap:P.endRound, capSeg:18, seg:420}), silver, {chip:'#d9d9d6', note:'sterling'});
+const cavity = add('Internal cavity', sweep(cavProf, -sCav, sCav, {cap:1.2, seg:300}),
+  new THREE.MeshStandardMaterial({color:0x6fd2ff, transparent:true, opacity:.16, depthWrite:false, side:THREE.DoubleSide}),
+  {internal:true, chip:'#6fd2ff'});
+
+// Inner cover: thin curved panel on the skin side; its seam only exists on the inside.
+const coverProf = section(0.5, P.coverT/2+0.03, cavHv+0.3, 8, 8, 40);
+const cover = add('Inner cover (removable)', sweep(coverProf, -(sCav-1), sCav-11, {cap:0.5, seg:260}), satin, {chip:'#bdbcb8'});
+
+// Electronics placeholders (simple volumes, NOT real component sizes)
+const box = (u0,u1,hv,sA,sB,cap=0.6) => sweep(section((u0+u1)/2,(u1-u0)/2,hv,8,8,32), sA, sB, {cap});
+const uIn = W+0.15, uOut = P.thick-W-0.15;
+// pulsē layout (s = mm along the band from the top of the wrist). The optical sensor sits on top of the wrist,
+// where a cuff presses most firmly against the skin.
+add('Flex PCB', box(uIn, uIn+0.15, cavHv-0.6, -(sCav-1.5), sCav-1.5, 0.3), plain(0xd99a2b,{roughness:.4}), {internal:true, chip:'#d99a2b', anchor:-30});
+add('Infrared heart-rate sensor', box(uIn+0.35, uIn+1.6, 4.2, -6.5, 6.5), plain(0x8d5bc2), {internal:true, chip:'#8d5bc2', anchor:0});
+add('Accelerometer', box(uIn+0.35, uIn+1.1, 1.8, 8, 11.5, 0.3), plain(0x2b9bb5), {internal:true, chip:'#2b9bb5', anchor:9.75});
+add('Microcontroller + Bluetooth', box(uIn+0.35, uIn+1.6, cavHv-1.3, 14, 29), plain(0x2f8a5b), {internal:true, chip:'#2f8a5b', anchor:21});
+add('Vibration motor (buzz alert)', box(uIn+0.35, uOut-0.2, 4, 33, 42), plain(0x6b6f78,{metalness:.6, roughness:.35}), {internal:true, chip:'#6b6f78', anchor:37.5});
+add('Battery (curved LiPo)', box(uIn+0.35, uOut-0.1, cavHv-0.9, -50, -13), plain(0x5b6b8a), {internal:true, chip:'#5b6b8a', anchor:-31});
+add('Bluetooth antenna', box(uIn+0.35, uIn+0.9, cavHv-1.5, sCav-9, sCav-1.5, 0.4), plain(0xe14b5a), {internal:true, chip:'#e14b5a', anchor:sCav-5});
+// Visible-from-inside features
+// Optical window: dark glass the infrared light shines through, with two emitters and a photodiode behind it
+const opticalWin = add('Optical window', sweep(section(-0.05,0.12,3.6,8,8,32), -5, 5, {cap:0.8}),
+  new THREE.MeshPhysicalMaterial({color:0x0c0d12, metalness:0, roughness:.05, clearcoat:1, clearcoatRoughness:.03}), {chip:'#1a1b22', anchor:0, onCover:true});
+(function optics(){
+  const led = plain(0x5a0d18, {emissive:0x3a0610, roughness:.3}), pd = plain(0x1d2433, {roughness:.25});
+  for (const [sv, mat, r] of [[-2.6, led, 0.8], [0, pd, 1.1], [2.6, led, 0.8]]){
+    const fr = frame(thAt(sv)), c = new THREE.Mesh(new THREE.CylinderGeometry(r, r, 0.12, 32), mat);
+    c.position.copy(fr.p).addScaledVector(fr.n, -0.1);
+    c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), fr.n);
+    opticalWin.mesh.add(c);
+  }
+})();
+add('Antenna window (nonmetal)', sweep(section(0.5,P.coverT/2+0.03,cavHv+0.3,8,8,40), sCav-10, sCav-0.5, {cap:0.5}),
+  plain(0xfafafa,{roughness:.25}), {chip:'#fafafa', anchor:sCav-5, onCover:true});
+(function contacts(){
+  const g = new THREE.Group(), mat = plain(0xd4af37,{metalness:1, roughness:.25});
+  const fr = frame(thAt(-(sCav-6)));
+  for (const v of [-3,3]){
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,0.4,32), mat);
+    c.position.copy(fr.p).addScaledVector(fr.n,-0.1).addScaledVector(Z,v);
+    c.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0), fr.n);
+    g.add(c);
+  }
+  g.name='Charging contacts'; group.add(g);
+  parts.push({name:'Charging contacts', mesh:g, mat, chip:'#d4af37', anchor:-(sCav-6), onCover:true});
+})();
+// Optional status light ("screen or light system - potential"): a thin frosted light pipe on the side edge,
+// so the outer face stays unbroken. Marked optional so it can be switched off.
+add('Status light (optional)', sweep(section(P.thick/2, 0.55, 0.14, 8, 8, 24).map(([u,v]) => [u, v + P.width/2 - 0.06]), -16, -6, {cap:0.3}),
+  plain(0xe8f4ff, {emissive:0x6fb8ff, emissiveIntensity:.6, roughness:.4}), {chip:'#9fd0ff', anchor:-11, optional:true});
+
+return {P, A, B, Z, frame, thAt, sAt, section, sweep, volume, gapFor, delta, sEnd, sCav, W, cavHu, cavHv,
+  shellProf, cavProf, group, parts, shell, cavity, cover, silver, satin};
+};
+</script>
+<!-- cuff-model:end -->
+<script type="module">
+import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js';
+
+// Scene units are centimetres. The cuff model is in millimetres, so it is scaled by 0.1 and otherwise untouched.
+const DUR = 15;
+const T = {hold:2.5, impact:6.0, slowEnd:8.6, scatterEnd:11.5, end:DUR};
+const rand = (() => { let s = 7; return () => (s = (s*16807) % 2147483647) / 2147483647; })();
+const smooth = THREE.MathUtils.smoothstep;
+
+// ---------- Renderer ----------
+const canvas = document.getElementById('gl');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:false, powerPreference:'high-performance'});
+const DPR = Math.min(devicePixelRatio, 1.75);
+renderer.setPixelRatio(DPR);
+renderer.toneMapping = THREE.NoToneMapping;          // tone mapping happens in the final pass, after bloom
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const BG = new THREE.Color(0x000000);
+scene.background = BG;
+const camera = new THREE.PerspectiveCamera(30, 1, 1, 400);
+
+// ---------- Dark studio: softboxes and strips that the silver and the diamonds reflect ----------
+const envScene = new THREE.Scene();
+envScene.background = new THREE.Color(0x000000);
+function softbox(w,h,lum,pos){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({color:new THREE.Color(lum,lum,lum), side:THREE.DoubleSide}));
+  m.position.set(...pos); m.lookAt(0,0,0); envScene.add(m); return m;
+}
+softbox(26,26,3.2,[0,46,4]);          // overhead
+softbox(7,52,9,[-40,14,22]);          // key strip
+softbox(7,52,6,[42,10,-16]);          // fill strip
+softbox(64,4,12,[0,22,-44]);          // rim behind
+softbox(30,3,1.2,[0,-3,46]);          // low kicker
+for (let i=0;i<22;i++){                // small hard lights: these become the diamond sparkle
+  const a = rand()*Math.PI*2, e = 0.15 + rand()*1.1, r = 44;
+  softbox(1.6,1.6,30+rand()*30,[r*Math.cos(e)*Math.cos(a), r*Math.sin(e), r*Math.cos(e)*Math.sin(a)]);
+}
+const sweepLight = softbox(5,80,22,[-48,24,0]);
+// the stones get their own environment: near-black with many small hard lights, which is what makes facets flash
+const gemScene = new THREE.Scene();
+gemScene.background = new THREE.Color(0.02,0.02,0.022);
+function gemLight(w,h,lum,pos){
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), new THREE.MeshBasicMaterial({color:new THREE.Color(lum,lum,lum), side:THREE.DoubleSide}));
+  m.position.set(...pos); m.lookAt(0,0,0); gemScene.add(m); return m;
+}
+for (let i=0;i<120;i++){
+  const a = rand()*Math.PI*2, e = -0.2 + rand()*1.6, r = 44, sz = 1 + rand()*2.4;
+  gemLight(sz, sz, 20 + rand()*60, [r*Math.cos(e)*Math.cos(a), r*Math.sin(e), r*Math.cos(e)*Math.sin(a)]);
+}
+for (let i=0;i<14;i++){                // broad dim cards give the stones a silvery body between flashes
+  const a = rand()*Math.PI*2, e = rand()*1.2, r = 45;
+  gemLight(14, 14, 0.12 + rand()*0.25, [r*Math.cos(e)*Math.cos(a), r*Math.sin(e), r*Math.cos(e)*Math.sin(a)]);
+}
+gemLight(2,50,14,[-40,14,22]); gemLight(2,50,10,[42,10,-16]); gemLight(50,1.5,16,[0,22,-44]); gemLight(10,10,1.5,[0,46,4]);
+sweepLight.visible = false;
+const pmrem = new THREE.PMREMGenerator(renderer);
+const cubeRT = new THREE.WebGLCubeRenderTarget(512, {type:THREE.HalfFloatType, generateMipmaps:true, minFilter:THREE.LinearMipmapLinearFilter});
+const cubeCam = new THREE.CubeCamera(0.1, 100, cubeRT);
+let envRT = null;
+function updateEnv(){
+  const next = pmrem.fromScene(envScene, 0.01);
+  scene.environment = next.texture;
+  if (envRT) envRT.dispose();
+  envRT = next;
+}
+updateEnv();
+cubeCam.update(renderer, gemScene);
+
+// ---------- Lights (shadows + a hint of direct highlight on the metal) ----------
+const key = new THREE.SpotLight(0xffffff, 1.6, 0, 0.42, 0.9, 1);
+key.position.set(-14, 46, 20); key.castShadow = true;
+key.shadow.mapSize.set(2048,2048); key.shadow.bias = -0.0004; key.shadow.camera.near = 20; key.shadow.camera.far = 90;
+scene.add(key, key.target);
+const rim = new THREE.SpotLight(0xdfe6ff, 1.2, 0, 0.5, 1, 1);
+rim.position.set(10, 18, -40); scene.add(rim, rim.target);
+
+// ---------- Dark reflective floor ----------
+const mirror = new THREE.Reflector(new THREE.PlaneGeometry(600,600), {
+  color:0x4a4a4a, clipBias:0.002, textureWidth:innerWidth*DPR*0.6, textureHeight:innerHeight*DPR*0.6});
+mirror.rotation.x = -Math.PI/2; scene.add(mirror);
+const dim = new THREE.Mesh(new THREE.PlaneGeometry(600,600), new THREE.ShaderMaterial({
+  transparent:true, depthWrite:false,
+  vertexShader:`varying vec3 vW; void main(){ vec4 w = modelMatrix*vec4(position,1.); vW=w.xyz; gl_Position=projectionMatrix*viewMatrix*w; }`,
+  fragmentShader:`varying vec3 vW; void main(){ float d = length(vW.xz); gl_FragColor = vec4(0.,0.,0., mix(.45, 1., smoothstep(14., 70., d))); }`
+}));
+dim.rotation.x = -Math.PI/2; dim.position.y = 0.01; scene.add(dim);
+const shadowCatcher = new THREE.Mesh(new THREE.PlaneGeometry(600,600), new THREE.ShadowMaterial({opacity:.75}));
+shadowCatcher.rotation.x = -Math.PI/2; shadowCatcher.position.y = 0.02; shadowCatcher.receiveShadow = true; scene.add(shadowCatcher);
+const mirrorRender = mirror.onBeforeRender;
+mirror.onBeforeRender = function(...a){
+  if (scene.overrideMaterial) return;                 // skip during the depth-of-field depth pass
+  dim.visible = shadowCatcher.visible = false;
+  mirrorRender.apply(this, a);
+  dim.visible = shadowCatcher.visible = true;
+};
+
+// A dark dome under the pile gives the stones a mound to rest on (it is hidden beneath them)
+const DOME = {R:12, y:-9.4};
+const dome = new THREE.Mesh(new THREE.SphereGeometry(DOME.R, 96, 48, 0, Math.PI*2, 0, 0.66),
+  new THREE.MeshBasicMaterial({color:0x000000}));
+dome.position.y = DOME.y; dome.receiveShadow = true; scene.add(dome);
+
+// ---------- The cuff: the exact shared model ----------
+const M = buildCuff(THREE);
+M.parts.forEach(p => { if (p.internal || p.optional) p.mesh.visible = false; });   // the film keeps its original look
+M.group.traverse(o => { if (o.isMesh){ o.castShadow = true; o.receiveShadow = true; } });
+
+// Collision proxy: overlapping spheres that follow the band (physics only, never drawn).
+// Sphere contacts are cannon's most robust, which matters for a heavy object arriving fast.
+const proxy = [];
+(function(){
+  const mm = 0.1, r = M.P.thick/2*mm, sE = M.sEnd + M.P.endRound*0.4;
+  const N = Math.ceil(2*sE*mm/0.38);
+  for (let k=0;k<=N;k++){
+    const sv = -sE + 2*sE*k/N, sc = Math.max(-M.sEnd, Math.min(M.sEnd, sv)), fr = M.frame(M.thAt(sc));
+    const base = fr.p.clone().addScaledVector(fr.n, M.P.thick/2).addScaledVector(fr.t, sv - sc);
+    const half = (Math.abs(sv) > M.sEnd ? 0.25 : 0.45) / mm;
+    for (const v of [-half, 0, half]) proxy.push({c: base.clone().addScaledVector(M.Z, v).multiplyScalar(mm), r, w:1});
+  }
+})();
+const com = new THREE.Vector3(); { let w=0; proxy.forEach(b => { com.addScaledVector(b.c, b.w); w += b.w; }); com.divideScalar(w); }
+const cuffInner = M.group; cuffInner.scale.setScalar(0.1); cuffInner.position.copy(com).negate();
+const cuff = new THREE.Group(); cuff.add(cuffInner); scene.add(cuff);
+const CUFF_MASS = 74;   // grams, from the model's silver volume
+
+// ---------- Diamonds: round brilliant geometry + a refractive, dispersive shader ----------
+function brilliant(){
+  const ring = (n, r, y, off) => Array.from({length:n}, (_,i) => { const a = (i+off)/n*Math.PI*2; return [r*Math.cos(a), y, r*Math.sin(a), a]; });
+  const table = ring(8,.28,.155,0), crown = ring(8,.42,.075,.5), gTop = ring(16,.5,.012,0), gBot = ring(16,.5,-.012,0), pav = ring(8,.25,-.2,0);
+  const pos = [], C = new THREE.Vector3(0,-.05,0);
+  const tri = (a,b,c) => {
+    const A = new THREE.Vector3(a[0],a[1],a[2]), B = new THREE.Vector3(b[0],b[1],b[2]), Cc = new THREE.Vector3(c[0],c[1],c[2]);
+    const n = new THREE.Vector3().subVectors(B,A).cross(new THREE.Vector3().subVectors(Cc,A));
+    const mid = A.clone().add(B).add(Cc).divideScalar(3).sub(C);
+    if (n.dot(mid) < 0) pos.push(...a.slice(0,3), ...c.slice(0,3), ...b.slice(0,3)); else pos.push(...a.slice(0,3), ...b.slice(0,3), ...c.slice(0,3));
+  };
+  const fan = (r, p) => r.forEach((v,i) => tri(p, v, r[(i+1)%r.length]));
+  const zip = (a, b) => {
+    let i=0, j=0; const na=a.length, nb=b.length, TAU=Math.PI*2;
+    while (i<na || j<nb){
+      const angA = i<na ? a[(i+1)%na][3] + (i+1>=na?TAU:0) : Infinity;
+      const angB = j<nb ? b[(j+1)%nb][3] + (j+1>=nb?TAU:0) : Infinity;
+      if (angA <= angB){ tri(a[i%na], a[(i+1)%na], b[j%nb]); i++; } else { tri(a[i%na], b[(j+1)%nb], b[j%nb]); j++; }
+    }
+  };
+  fan(table, [0,.155,0]); zip(table,crown); zip(crown,gTop); zip(gTop,gBot); zip(gBot,pav); fan(pav,[0,-.43,0]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos,3)); g.computeVertexNormals();
+  return g;
+}
+const diamondMat = new THREE.ShaderMaterial({
+  uniforms:{ env:{value:cubeRT.texture}, gain:{value:0.85} },
+  vertexShader:`
+    varying vec3 vN; varying vec3 vP; varying vec3 vUp;
+    void main(){
+      mat4 m = modelMatrix * instanceMatrix;
+      vec4 w = m * vec4(position,1.0);
+      vN = normalize(mat3(m) * normal); vUp = normalize(mat3(m) * vec3(0.,1.,0.)); vP = w.xyz;
+      gl_Position = projectionMatrix * viewMatrix * w;
+    }`,
+  fragmentShader:`
+    uniform samplerCube env; uniform float gain;
+    varying vec3 vN; varying vec3 vP; varying vec3 vUp;
+    vec3 E(vec3 d){ return textureCube(env, d).rgb; }
+    void main(){
+      vec3 N = normalize(vN), V = normalize(vP - cameraPosition), up = normalize(vUp);
+      float c = clamp(dot(-V,N), 0., 1.);
+      float F = 0.17 + 0.83*pow(1.-c, 5.);              // diamond Fresnel (n = 2.42)
+      vec3 col = E(reflect(V,N)) * F;
+      // light enters, bounces off the facet mirrored across the girdle, and leaves split by wavelength
+      vec3 Nb = normalize(N - 2.*dot(N,up)*up);
+      vec3 g = reflect(refract(V,N,1./2.42), Nb);
+      vec3 r = normalize(g + (reflect(refract(V,N,1./2.40), Nb) - g) * 7.);
+      vec3 b = normalize(g + (reflect(refract(V,N,1./2.45), Nb) - g) * 7.);
+      vec3 inner = vec3(E(r).r, E(g).g, E(b).b);
+      vec3 g2 = reflect(g, -N);                          // a second internal bounce adds depth
+      inner += 0.35 * E(g2);
+      col += inner * (1.-F) * 0.9 + 0.006;
+      gl_FragColor = vec4(col * gain, 1.0);
+    }`
+});
+
+// ---------- Physics bake ----------
+const bar = document.getElementById('bar');
+const frameTimes = [];   // physical seconds
+const frames = [];       // Float32Array per frame: [x,y,z,qx,qy,qz,qw] per body, cuff first
+let diamonds = [], pileTop = 0, tImpact = 0;
+
+async function bake(){
+  const bakeStart = performance.now();
+  const world = new CANNON.World({gravity:new CANNON.Vec3(0,-981,0)});
+  world.broadphase = new CANNON.SAPBroadphase(world);
+  world.allowSleep = true;
+  world.solver.iterations = 20;
+  const mDia = new CANNON.Material('dia'), mFloor = new CANNON.Material('floor'), mCuff = new CANNON.Material('cuff');
+  const cm = (a,b,f,r) => { const c = new CANNON.ContactMaterial(a,b,{friction:f, restitution:r, contactEquationStiffness:1e8, contactEquationRelaxation:3}); world.addContactMaterial(c); return c; };
+  const diaDia = cm(mDia,mDia,.6,.05), diaFloor = cm(mDia,mFloor,.6,.05);
+  cm(mDia,mCuff,.12,.05);   // the cuff lands dead, no rebound (the splash throws the stones) cm(mCuff,mFloor,.4,.1);
+
+  const floor = new CANNON.Body({mass:0, material:mFloor, shape:new CANNON.Plane(), collisionFilterGroup:1, collisionFilterMask:-1});
+  floor.quaternion.setFromEuler(-Math.PI/2,0,0); world.addBody(floor);
+
+  const G = {floor:1, stone:2, cuff:4, dome:8};
+  const domeS = new CANNON.Body({mass:0, material:mFloor, shape:new CANNON.Sphere(DOME.R), collisionFilterGroup:G.dome, collisionFilterMask:G.stone|G.cuff});
+  domeS.position.set(0, DOME.y, 0); world.addBody(domeS);
+  // diamonds: four spheres per stone approximate the girdle and pavilion
+  const spawn = (x,y,z,D) => {
+    const b = new CANNON.Body({mass:3.51*0.22*D*D*D, material:mDia, allowSleep:true,
+      collisionFilterGroup:G.stone, collisionFilterMask:G.floor|G.stone|G.cuff|G.dome, sleepSpeedLimit:1.5, sleepTimeLimit:0.25,
+      linearDamping:0.01, angularDamping:0.02});
+    for (let k=0;k<3;k++){ const a = k/3*Math.PI*2; b.addShape(new CANNON.Sphere(0.22*D), new CANNON.Vec3(0.26*D*Math.cos(a), -0.03*D, 0.26*D*Math.sin(a))); }
+    b.addShape(new CANNON.Sphere(0.17*D), new CANNON.Vec3(0,-0.2*D,0));
+    b.position.set(x,y,z);
+    b.quaternion.setFromEuler(rand()*6.28, rand()*6.28, rand()*6.28);
+    b.isDiamond = true; b.D = D; world.addBody(b); diamonds.push(b);
+  };
+  const size = () => 0.5 + Math.pow(rand(), 1.8)*0.45;
+  const domeY = (x,z) => Math.max(0, DOME.y + Math.sqrt(Math.max(0, DOME.R*DOME.R - x*x - z*z)));
+  const PILE = 780;
+  for (let layer=0, n=0; n<PILE; layer++){
+    for (let gx=-9; gx<=9 && n<PILE; gx++) for (let gz=-9; gz<=9 && n<PILE; gz++){
+      const x = gx*0.9 + (rand()-.5)*.25, z = gz*0.9 + (rand()-.5)*.25;
+      if (x*x+z*z > 7.6*7.6) continue;
+      spawn(x, domeY(x,z) + 0.6 + layer*0.95, z, size()); n++;
+    }
+  }
+  for (let i=0;i<46;i++){ const a = rand()*Math.PI*2, r = 8 + rand()*14; spawn(r*Math.cos(a), 0.6, r*Math.sin(a), size()); }
+
+  // yield through a message channel: unlike animation frames and timers, it keeps running in a background tab
+  const chan = new MessageChannel(), waiting = [];
+  chan.port1.onmessage = () => waiting.shift()?.();
+  const yieldUI = (p) => new Promise(r => {
+    bar.style.width = (p*100).toFixed(0)+'%';
+    if (document.visibilityState === 'visible') requestAnimationFrame(r);   // lets the progress bar paint
+    else { waiting.push(r); chan.port2.postMessage(0); }
+  });
+  for (let i=0;i<420;i++){ world.step(1/240); if (i%15==0) await yieldUI(0.35*i/420); }
+  settleMs = performance.now() - bakeStart;
+  diamonds.forEach(b => { b.velocity.setZero(); b.angularVelocity.setZero(); b.sleep(); });
+  diaDia.friction = .45; diaDia.restitution = .5; diaFloor.friction = .5; diaFloor.restitution = .5;   // hard, lively stones that still hold a heap
+  pileTop = Math.max(...diamonds.filter(b => Math.hypot(b.position.x,b.position.z) < 3).map(b => b.position.y));
+
+  // the cuff: heavy, released from rest, nearly level; it drops straight down and stays where it lands
+  const cuffBody = new CANNON.Body({mass:CUFF_MASS, material:mCuff,
+    collisionFilterGroup:G.cuff, collisionFilterMask:G.floor|G.stone|G.dome, allowSleep:false, linearDamping:0, angularDamping:0.05});
+  proxy.forEach(p => cuffBody.addShape(new CANNON.Sphere(p.r), new CANNON.Vec3(p.c.x-com.x, p.c.y-com.y, p.c.z-com.z)));
+  const q0 = new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2 + 0.1, 0.5, 0.05, 'YXZ'));
+  cuffBody.quaternion.set(q0.x,q0.y,q0.z,q0.w);
+  cuffBody.position.set(0, pileTop + 40, 0);
+  cuffBody.linearFactor.set(0, 1, 0);      // no sliding sideways
+  cuffBody.angularFactor.set(0, 0, 0);     // no tipping or spinning
+  world.addBody(cuffBody);
+  const bodies = [cuffBody, ...diamonds];
+
+  const record = (t) => {
+    const f = new Float32Array(bodies.length*7);
+    bodies.forEach((b,i) => { const o=i*7; f[o]=b.position.x; f[o+1]=b.position.y; f[o+2]=b.position.z;
+      f[o+3]=b.quaternion.x; f[o+4]=b.quaternion.y; f[o+5]=b.quaternion.z; f[o+6]=b.quaternion.w; });
+    frameTimes.push(t); frames.push(f);
+  };
+  let t = 0, fineUntil = Infinity, steps = 0, woke = false; tImpact = 0;
+  // Splash: as the cuff's underside reaches each stone near the band, that stone is thrown up and away
+  // from the cuff (a crown splash). After the kick, the flight, spin, bounces and settling are all physics.
+  const kicked = new Set();
+  const splash = () => {
+    const cx = cuffBody.position.x, cz = cuffBody.position.z, under = cuffBody.position.y - 0.9;
+    for (const b of diamonds){
+      if (kicked.has(b)) continue;
+      const dx = b.position.x - cx, dz = b.position.z - cz, d = Math.hypot(dx, dz);
+      if (d > 5.6 || b.position.y < under) continue;
+      kicked.add(b);
+      const ox = d > 0.01 ? dx/d : 1, oz = d > 0.01 ? dz/d : 0, k = 0.6 + 0.4*Math.min(1, d/3.5);
+      const up = (110 + rand()*170) * k, out = 60 + rand()*130, side = (rand()-.5)*60;
+      b.wakeUp();
+      b.velocity.set(ox*out - oz*side, up, oz*out + ox*side);
+      b.angularVelocity.set((rand()-.5)*60, (rand()-.5)*60, (rand()-.5)*60);
+    }
+  };
+  const AFTER = 2.8, SINK = 1.3;
+  let impactY = 0;
+  record(0);
+  while (!tImpact || t < tImpact + AFTER){
+    const near = cuffBody.position.y < pileTop + 6 && t < fineUntil;
+    // sleeping bodies act as immovable on the step they are first hit, so wake the pile just before contact
+    if (near && !woke){ diamonds.forEach(b => { if (Math.hypot(b.position.x-cuffBody.position.x, b.position.z-cuffBody.position.z) < 6.5) b.wakeUp(); }); woke = true; }
+    const dt = near ? 1/900 : 1/240;
+    world.step(dt); t += dt; steps++;
+    if (!tImpact) for (const c of world.contacts){
+      if ((c.bi===cuffBody && c.bj.isDiamond) || (c.bj===cuffBody && c.bi.isDiamond)){ tImpact = t; fineUntil = t + 0.45;
+        // from here the heavy cuff ploughs down into the stones on a controlled path, pushing them aside
+        impactY = cuffBody.position.y; cuffBody.type = CANNON.Body.KINEMATIC; cuffBody.updateMassProperties(); break; }
+    }
+    if (tImpact && t < tImpact + 0.09) splash();
+    if (tImpact){   // sink SINK cm: a quick bite on contact, then an easing settle
+      const left = Math.max(0, cuffBody.position.y - (impactY - SINK));
+      cuffBody.velocity.set(0, -Math.min(60, left*7 + 0.6*left*left*20), 0);
+    }
+    record(t);
+    if (steps % 25 == 0) await yieldUI(0.35 + 0.65*(tImpact ? Math.min(1,(t-tImpact)/AFTER) : 0));
+    if (t > 4) break;   // safety
+  }
+  bakeMs = performance.now() - bakeStart;
+}
+let bakeMs = 0, settleMs = 0;
+
+// ---------- Timeline: real seconds -> physical seconds (slow motion curve) ----------
+let tauTable = null;
+function buildTimeline(){
+  const rImp = 0.03, dt = 1/1000;
+  const fallShape = (u,k) => smooth(u,0,.3) * (rImp + k*Math.sin(Math.PI*u));
+  let I0 = 0, I1 = 0;
+  for (let t=T.hold; t<T.impact; t+=dt){ const u=(t-T.hold)/(T.impact-T.hold); I0 += fallShape(u,0)*dt; I1 += fallShape(u,1)*dt; }
+  const k = Math.max(0, (tImpact - I0)/(I1 - I0));
+  const rate = t => {
+    if (t < T.hold) return 0;
+    if (t < T.impact) return fallShape((t-T.hold)/(T.impact-T.hold), k);
+    if (t < T.slowEnd) return rImp;
+    if (t < T.scatterEnd) return rImp + (0.3-rImp)*smooth(t, T.slowEnd, T.scatterEnd);
+    return 0.3 + 0.55*smooth(t, T.scatterEnd, T.end);
+  };
+  tauTable = new Float32Array(Math.ceil(DUR/dt)+2);
+  let tau = 0; for (let i=0;i<tauTable.length;i++){ tauTable[i] = tau; tau += rate(i*dt)*dt; }
+}
+const tauAt = t => tauTable[Math.min(tauTable.length-1, Math.max(0, Math.round(t*1000)))];
+
+// ---------- Playback ----------
+let inst, cuffRest = new THREE.Vector3();
+const _q = new Float32Array(4), _p = new THREE.Vector3(), _qq = new THREE.Quaternion(), _s = new THREE.Vector3(), _m = new THREE.Matrix4();
+function sample(tau, i, outP, outQ){
+  let lo = 0, hi = frameTimes.length-1;
+  if (tau >= frameTimes[hi]) lo = hi-1;
+  else while (hi-lo > 1){ const m=(lo+hi)>>1; frameTimes[m] <= tau ? lo=m : hi=m; }
+  const a = frames[lo], b = frames[lo+1] || a, o = i*7;
+  const f = Math.min(1, Math.max(0, (tau-frameTimes[lo]) / ((frameTimes[lo+1]-frameTimes[lo]) || 1)));
+  outP.set(a[o]+(b[o]-a[o])*f, a[o+1]+(b[o+1]-a[o+1])*f, a[o+2]+(b[o+2]-a[o+2])*f);
+  THREE.Quaternion.slerpFlat(_q, 0, a, o+3, b, o+3, f);
+  outQ.set(_q[0],_q[1],_q[2],_q[3]);
+}
+function setupInstances(){
+  inst = new THREE.InstancedMesh(brilliant(), diamondMat, diamonds.length);
+  inst.castShadow = true; inst.frustumCulled = false;
+  scene.add(inst);
+  // a still bed of stones set into the dome, under the moving ones, so the mound never shows through
+  const BED = 1400, bed = new THREE.InstancedMesh(inst.geometry, diamondMat, BED);
+  for (let i=0, n=0; n<BED && i<20000; i++){
+    const r = 7.9*Math.sqrt(rand()), a = rand()*Math.PI*2, x = r*Math.cos(a), z = r*Math.sin(a);
+    const h = DOME.y + Math.sqrt(Math.max(0, DOME.R*DOME.R - x*x - z*z));
+    if (h <= 0.05) continue;
+    const D = 0.45 + rand()*0.35;
+    _qq.setFromEuler(new THREE.Euler(rand()*6.28, rand()*6.28, rand()*6.28));
+    bed.setMatrixAt(n++, _m.compose(_p.set(x, h - 0.1*D, z), _qq, _s.setScalar(D)));
+  }
+  scene.add(bed);
+  const last = frameTimes[frameTimes.length-1];
+  sample(last, 0, cuffRest, _qq);
+}
+function applyFrame(t){
+  const tau = tauAt(t);
+  sample(tau, 0, cuff.position, cuff.quaternion);
+  if (t < T.hold){   // suspended: a barely-there hover
+    const k = 1 - smooth(t, 0, T.hold);
+    cuff.position.y += 0.12*Math.sin(t*1.7)*k;
+  }
+  if (t < T.impact){
+    // Turning and gently rocking while it hangs and falls. Both reach zero exactly at impact, so the cuff
+    // meets the stones in the pose the physics used and then stays put.
+    const left = (T.impact - t) / T.impact;
+    _qq.setFromEuler(new THREE.Euler(0.22*Math.sin(t*1.3)*left, -0.7*(T.impact - t), 0.12*Math.sin(t*0.9+1)*left, 'YXZ'));
+    cuff.quaternion.premultiply(_qq);
+  }
+  diamonds.forEach((b,i) => {
+    sample(tau, i+1, _p, _qq); _s.setScalar(b.D);
+    inst.setMatrixAt(i, _m.compose(_p, _qq, _s));
+  });
+  inst.instanceMatrix.needsUpdate = true;
+  return tau;
+}
+
+// ---------- Camera direction ----------
+const keys = (pts) => t => {   // eased interpolation through [time, value] keys
+  if (t <= pts[0][0]) return pts[0][1];
+  for (let i=0;i<pts.length-1;i++){ const [t0,v0]=pts[i],[t1,v1]=pts[i+1];
+    if (t <= t1){ const u=(t-t0)/(t1-t0), e=u*u*(3-2*u); return v0+(v1-v0)*e; } }
+  return pts[pts.length-1][1];
+};
+const radius = keys([[0,19],[2.5,17],[5.4,15],[6.4,15.5],[8.6,18],[11.5,25],[15,14]]);
+const elev   = keys([[0,-0.04],[2.5,0.06],[5.4,0.2],[6.4,0.36],[8.6,0.42],[11.5,0.55],[15,0.5]]);
+const azim   = t => 0.75 + 0.075*t;
+const follow = keys([[0,1],[8.6,1],[11.5,0.55],[13,0.9],[15,1]]);
+const camTarget = new THREE.Vector3(), camWant = new THREE.Vector3(), focusPt = new THREE.Vector3();
+let camInit = false;
+function direct(t, dt){
+  const pileC = new THREE.Vector3(0, pileTop*0.5, 0);
+  camWant.copy(pileC).lerp(cuff.position, follow(t));
+  if (t > 11.5) camWant.lerp(cuffRest, smooth(t, 11.5, 14));
+  if (!camInit){ camTarget.copy(camWant); camInit = true; }
+  camTarget.lerp(camWant, 1 - Math.exp(-dt*5));
+  const r = radius(t) * (camera.aspect < 1 ? 1.55 : 1), e = elev(t), a = azim(t);
+  camera.position.set(camTarget.x + r*Math.cos(e)*Math.cos(a), camTarget.y + r*Math.sin(e), camTarget.z + r*Math.cos(e)*Math.sin(a));
+  camera.position.y = Math.max(camera.position.y, 0.9);
+  camera.lookAt(camTarget);
+  focusPt.copy(cuff.position);
+  bokeh.uniforms.focus.value = camera.position.distanceTo(focusPt);
+  // final highlight sweep across the silver
+  const sw = smooth(t, 12.2, 14.6);
+  sweepLight.visible = t > 12.1 && t < 14.8;
+  if (sweepLight.visible){ sweepLight.position.set(-48 + 96*sw, 24, 30 - 20*sw); sweepLight.lookAt(0,0,0); updateEnv(); }
+  else if (sweepWasOn) updateEnv();
+  sweepWasOn = sweepLight.visible;
+}
+let sweepWasOn = false;
+
+// ---------- Post: depth of field, bloom, filmic tone map ----------
+const rt = new THREE.WebGLRenderTarget(innerWidth*DPR, innerHeight*DPR, {type:THREE.HalfFloatType});
+const composer = new THREE.EffectComposer(renderer, rt);
+composer.addPass(new THREE.RenderPass(scene, camera));
+// Depth of field: a depth-aware gather, so out-of-focus sparkles become soft discs
+// and the blurred background never smears over the sharp cuff.
+const depthRT = new THREE.WebGLRenderTarget(1, 1);
+const depthMat = new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking, blending:THREE.NoBlending});
+const dof = new THREE.ShaderPass({
+  uniforms:{ tDiffuse:{value:null}, tDepth:{value:depthRT.texture}, focus:{value:20}, aperture:{value:20}, maxCoC:{value:12},
+    res:{value:new THREE.Vector2(1,1)}, near:{value:camera.near}, far:{value:camera.far} },
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader:`
+    #include <packing>
+    uniform sampler2D tDiffuse, tDepth; uniform float focus, aperture, maxCoC, near, far; uniform vec2 res; varying vec2 vUv;
+    float dist(vec2 uv){ return -perspectiveDepthToViewZ(unpackRGBAToDepth(texture2D(tDepth, uv)), near, far); }
+    float coc(float z){ return min(maxCoC, aperture * abs(z - focus) / max(z, .001)); }
+    void main(){
+      float zc = dist(vUv), cc = coc(zc);
+      vec3 acc = texture2D(tDiffuse, vUv).rgb; float ws = 1.;
+      for (int i=0;i<44;i++){
+        float fi = float(i)+.5, r = sqrt(fi/44.) * maxCoC, a = fi*2.39996323;
+        vec2 uv = vUv + vec2(cos(a), sin(a)) * r / res;
+        float zs = dist(uv), cs = coc(zs);
+        if (zs > zc) cs = min(cs, cc);
+        float w = smoothstep(r - 1., r + .5, cs);
+        acc += texture2D(tDiffuse, uv).rgb * w; ws += w;
+      }
+      gl_FragColor = vec4(acc/ws, 1.);
+    }`
+});
+dof.uniforms.tDepth.value = depthRT.texture;   // ShaderPass clones texture uniforms, so bind the live one
+composer.addPass(dof);
+const bokeh = dof;   // focus is driven by the camera direction
+const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.45, 0.25, 1.8);
+// keep only the fine bloom levels: tight glints, no wide low-resolution haze
+bloom.compositeMaterial.uniforms.bloomFactors.value = [1.0, 0.45, 0.0, 0.0, 0.0];
+composer.addPass(bloom);
+const finish = new THREE.ShaderPass({
+  uniforms:{ tDiffuse:{value:null}, fade:{value:0}, time:{value:0}, exposure:{value:1.0} },
+  vertexShader:`varying vec2 vUv; void main(){ vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.); }`,
+  fragmentShader:`
+    uniform sampler2D tDiffuse; uniform float fade, time, exposure; varying vec2 vUv;
+    vec3 aces(vec3 x){ return clamp((x*(2.51*x+.03))/(x*(2.43*x+.59)+.14), 0., 1.); }
+    float h(vec2 p){ return fract(sin(dot(p, vec2(12.9898,78.233))) * 43758.5453); }
+    void main(){
+      vec3 c = aces(texture2D(tDiffuse, vUv).rgb * exposure);
+      c = pow(c, vec3(1./2.2));
+      c *= mix(1., smoothstep(.85, .2, length(vUv-.5)), .6);
+      c += (h(vUv*1000. + time) - .5) * .014;
+      gl_FragColor = vec4(c * fade, 1.);
+    }`
+});
+composer.addPass(finish);
+
+function resize(){
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false); composer.setSize(w, h);
+  camera.aspect = w/h; camera.fov = w/h < 1 ? 42 : 30; camera.updateProjectionMatrix();
+  mirror.getRenderTarget().setSize(w*DPR*0.6, h*DPR*0.6);
+  depthRT.setSize(w*DPR, h*DPR);
+  dof.uniforms.res.value.set(w*DPR, h*DPR);
+  dof.uniforms.maxCoC.value = 0.009*h*DPR;
+  dof.uniforms.aperture.value = 2.2*dof.uniforms.maxCoC.value;
+}
+addEventListener('resize', resize); resize();
+
+// ---------- Run ----------
+let playing = true, clockT = 0, last = performance.now();
+const bPlay = document.getElementById('b-play'), iPlay = document.getElementById('i-play');
+const setIcon = () => { iPlay.innerHTML = playing ? '<path d="M4 2h3v12H4zM9 2h3v12H9z"/>' : '<path d="M4 2l10 6-10 6z"/>'; bPlay.setAttribute('aria-label', playing ? 'Pause' : 'Play'); };
+bPlay.onclick = () => { playing = !playing; setIcon(); };
+document.getElementById('b-replay').onclick = () => { clockT = 0; camInit = false; playing = true; setIcon(); };
+addEventListener('keydown', e => { if (e.code === 'Space'){ e.preventDefault(); bPlay.click(); } });
+let idle; addEventListener('pointermove', () => { document.body.classList.add('awake'); clearTimeout(idle); idle = setTimeout(() => document.body.classList.remove('awake'), 2200); });
+
+function loop(now){
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last)/1000); last = now;
+  if (playing) clockT += dt;
+  if (clockT >= DUR){ clockT = 0; camInit = false; }
+  applyFrame(clockT);
+  if (!window.__film?.dbg.freeze) direct(clockT, playing ? dt : 0);
+  finish.uniforms.fade.value = smooth(clockT, 0, 0.9) * (1 - smooth(clockT, DUR-0.7, DUR));
+  finish.uniforms.time.value = now*0.001;
+  scene.overrideMaterial = depthMat; scene.background = null;      // empty pixels must read as far away
+  renderer.setClearColor(0xffffff, 1);
+  renderer.setRenderTarget(depthRT); renderer.render(scene, camera);
+  renderer.setRenderTarget(null); scene.overrideMaterial = null; scene.background = BG;
+  renderer.setClearColor(0x000000, 1);
+  composer.render();
+}
+
+await bake();
+buildTimeline();
+setupInstances();
+document.getElementById('loader').classList.add('done');
+window.__film = {tImpact, pileTop, bakeMs, settleMs, frames: frames.length, seek: t => { clockT = t; camInit = false; }, pause: () => { playing = false; setIcon(); },
+  dbg: {scene, camera, inst, diamonds, frames, cuff, brilliant, diamondMat, composer, bloom, bokeh, finish, freeze:false}};
+last = performance.now();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>

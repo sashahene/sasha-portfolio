@@ -1,5 +1,13 @@
 function renderProjects() {
-  const list = document.getElementById("project-list");
+  const lists = document.querySelectorAll("#project-list, .project-list[data-category]");
+  if (lists.length === 0) {
+    renderProjectList(null);
+    return;
+  }
+  lists.forEach(renderProjectList);
+}
+
+function renderProjectList(list) {
   const allProjects = Array.isArray(window.PROJECTS) ? window.PROJECTS : [];
   const category = list && list.dataset.category;
   const projects = category
@@ -107,11 +115,30 @@ function renderWorkIndex(list, projects) {
         ? `<img src="${escapeHtml(project.image)}" alt="${escapeHtml(project.title || "")}">`
         : "";
       const description = project.description
-        ? `<p>${escapeHtml(project.description)}</p>`
+        ? `<p>${linkify(project.description)}</p>`
         : "";
+      const ctaLabel = project.cta || "View research";
       const cta =
         project.demo || project.github
-          ? `<a class="ide-work-cta" href="${escapeHtml(href)}"${external}>View research <span aria-hidden="true">↗</span></a>`
+          ? `<a class="ide-work-cta" href="${escapeHtml(href)}"${external}>${escapeHtml(ctaLabel)} <span aria-hidden="true">↗</span></a>`
+          : "";
+      const frame = project.frame === "poster" ? " is-poster" : "";
+      const visual = image
+        ? `<a class="ide-work-image${frame}" href="${escapeHtml(href)}"${external} aria-label="${escapeHtml(project.title || "Project")}">
+            ${image}
+            <span class="ide-work-go" aria-hidden="true">↗</span>
+          </a>`
+        : project.maker === "philographics"
+          ? `<div class="philo-maker" data-philo-maker>
+              <form class="philo-maker-form">
+                <p class="philo-maker-label">Make an image</p>
+                <input name="word" type="text" maxlength="28" placeholder="A word" autocomplete="off" required>
+                <input name="line" type="text" maxlength="90" placeholder="A short line" autocomplete="off">
+                <button type="submit">Make</button>
+              </form>
+              <div class="philo-maker-stage" hidden></div>
+              <button type="button" class="philo-maker-use" hidden>Put it here</button>
+            </div>`
           : "";
       const extras = models.length
         ? `<div class="ide-work-models">
@@ -126,13 +153,30 @@ function renderWorkIndex(list, projects) {
               .join("")}
           </div>`
         : "";
+      const video = project.video && project.video.src
+        ? `<section class="ide-work-video">
+            <div class="ide-work-video-copy">
+              <p class="ide-work-video-label">New product</p>
+              <h4>${escapeHtml(project.video.title || "")}</h4>
+              ${project.video.caption ? `<p>${linkify(project.video.caption)}</p>` : ""}
+            </div>
+            <video src="${escapeHtml(project.video.src)}" controls playsinline preload="metadata"></video>
+          </section>`
+        : "";
+      const pitch = project.pitch && project.pitch.src
+        ? `<section class="ide-work-video ide-work-pitch">
+            <div class="ide-work-video-copy">
+              <p class="ide-work-video-label">Pitch deck</p>
+              <h4>${escapeHtml(project.pitch.title || "Pitch")}</h4>
+              <p><a href="${escapeHtml(project.pitch.src)}" target="_blank" rel="noreferrer">Open the full pitch (PDF) ↗</a></p>
+            </div>
+            <iframe src="${escapeHtml(project.pitch.src)}#view=FitH" title="${escapeHtml(project.pitch.title || "Pitch deck")}" loading="lazy"></iframe>
+          </section>`
+        : "";
 
       return `
-        <li class="ide-work${models.length ? " has-models" : ""}">
-          <a class="ide-work-image" href="${escapeHtml(href)}"${external} aria-label="${escapeHtml(project.title || "Project")}">
-            ${image}
-            <span class="ide-work-go" aria-hidden="true">↗</span>
-          </a>
+        <li class="ide-work${models.length || video || pitch ? " has-models" : ""}">
+          ${visual}
           <div class="ide-work-copy">
             <div class="ide-work-meta">
               <span>${number}</span>
@@ -146,6 +190,8 @@ function renderWorkIndex(list, projects) {
             </div>
           </div>
           ${extras}
+          ${video}
+          ${pitch}
         </li>
       `;
     })
@@ -376,7 +422,49 @@ function escapeHtml(value) {
     .replaceAll('"', "&quot;");
 }
 
+function linkify(value) {
+  return escapeHtml(value).replace(
+    /https?:\/\/[^\s<]+/g,
+    (url) => `<a href="${url}" target="_blank" rel="noreferrer">${url}</a>`
+  );
+}
+
 renderProjects();
+setupPageTabs();
+
+// Tabs inside a page, e.g. TouchDesigner / Blender on the Graphic Design page.
+// The open tab is kept in the URL hash so it can be linked to directly.
+function setupPageTabs() {
+  document.querySelectorAll("[data-page-tabs]").forEach((tabList) => {
+    const tabs = [...tabList.querySelectorAll('[role="tab"]')];
+    if (!tabs.length) return;
+
+    function select(tab, updateHash) {
+      tabs.forEach((item) => {
+        const active = item === tab;
+        item.setAttribute("aria-selected", String(active));
+        item.tabIndex = active ? 0 : -1;
+        const panel = document.getElementById(item.getAttribute("aria-controls"));
+        if (panel) panel.hidden = !active;
+      });
+      if (updateHash) history.replaceState(null, "", `#${tab.dataset.tab}`);
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener("click", () => select(tab, true));
+      tab.addEventListener("keydown", (event) => {
+        const step = event.key === "ArrowRight" ? 1 : event.key === "ArrowLeft" ? -1 : 0;
+        if (!step) return;
+        const next = tabs[(index + step + tabs.length) % tabs.length];
+        next.focus();
+        select(next, true);
+      });
+    });
+
+    const fromHash = tabs.find((tab) => `#${tab.dataset.tab}` === location.hash);
+    select(fromHash || tabs[0], false);
+  });
+}
 
 const year = document.getElementById("year");
 if (year) {
