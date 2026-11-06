@@ -1,0 +1,96 @@
+{
+  "pass": true,
+  "interference": [],
+  "allowed_contact": [
+    {
+      "a": "Upper_housing_removable_cover",
+      "b": "Screw_M1p6_1",
+      "volume_mm3": 1.1839,
+      "reason": "thread-forming screw cuts into the pilot hole"
+    },
+    {
+      "a": "Upper_housing_removable_cover",
+      "b": "Screw_M1p6_2",
+      "volume_mm3": 1.1839,
+      "reason": "thread-forming screw cuts into the pilot hole"
+    },
+    {
+      "a": "Upper_housing_removable_cover",
+      "b": "Screw_M1p6_3",
+      "volume_mm3": 1.0116,
+      "reason": "thread-forming screw cuts into the pilot hole"
+    },
+    {
+      "a": "Upper_housing_removable_cover",
+      "b": "Screw_M1p6_4",
+      "volume_mm3": 1.0116,
+      "reason": "thread-forming screw cuts into the pilot hole"
+    },
+    {
+      "a": "Vibration_motor_DIANN",
+      "b": "Motor_wire_red",
+      "volume_mm3": 0.0052,
+      "reason": "wire enters the motor body"
+    },
+    {
+      "a": "Vibration_motor_DIANN",
+      "b": "Motor_wire_black",
+      "volume_mm3": 0.0052,
+      "reason": "wire enters the motor body"
+    },
+    {
+      "a": "LiPo_protection_end",
+      "b": "Battery_wire_red",
+      "volume_mm3": 0.0086,
+      "reason": "wire enters the protection board"
+    },
+    {
+      "a": "LiPo_protection_end",
+      "b": "Battery_wire_black",
+      "volume_mm3": 0.0106,
+      "reason": "wire enters the protection board"
+    }
+  ],
+  "clearances": {
+    "battery to BLE module": 0.894,
+    "battery to BLE shield can": 1.1,
+    "battery to cover": 0.25,
+    "motor to PCB": 1.075,
+    "motor to battery": 0.9,
+    "motor to PPG sensor": 7.525,
+    "BLE module to cover": 0.532,
+    "PCB to cover tongue": 0.05,
+    "PPG sensor to window": 0.35,
+    "strap A to lower housing": 0.2,
+    "strap B to lower housing": 0.2,
+    "strap A to strap B": 0.198,
+    "cover to lower housing": 0.0,
+    "Band_strap_A_short to reference wrist": 0.778,
+    "Band_strap_B_long to reference wrist": 0.778,
+    "Lower_housing to reference wrist": 0.0
+  },
+  "antenna": [],
+  "notes": [],
+  "pairs_tested": 120,
+  "solid_parts": 33,
+  "motor_max_height_mm": 3.4,
+  "pod": {
+    "length_body": 42.0,
+    "length_lug_to_lug": 50.8,
+    "width": 24.0,
+    "height_with_boss": 10.8
+  },
+  "band": {
+    "wrist_perimeter_reference": 165.1,
+    "adjust_range_mm": [
+      159.1,
+      183.1
+    ],
+    "strap_volume_mm3": [
+      2674.0,
+      3809.2
+    ]
+  },
+  "invalid_shapes": [],
+  "mass_estimate_g": 18.5
+}
